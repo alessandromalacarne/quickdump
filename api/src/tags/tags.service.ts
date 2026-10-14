@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
@@ -16,5 +16,13 @@ export class TagsService {
       name,
       count: _count.dumps,
     }));
+  }
+
+  async remove(id: string): Promise<void> {
+    const { count } = await this.prisma.tag.deleteMany({ where: { id } });
+
+    if (count === 0) {
+      throw new NotFoundException('Tag not found');
+    }
   }
 }
