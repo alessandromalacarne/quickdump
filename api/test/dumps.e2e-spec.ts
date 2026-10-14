@@ -56,9 +56,7 @@ describe('Dumps (e2e)', () => {
       .send({ content: 'text without a tag' })
       .expect(400);
 
-    expect(response.body.message).toBe(
-      'Include at least one #tag in the dump',
-    );
+    expect(response.body.message).toBe('Include at least one #tag in the dump');
   });
 
   it('rejects empty or blank content', async () => {
