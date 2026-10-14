@@ -10,6 +10,10 @@
   --color-mark: oklch(0.8 0.14 75);
   --color-mark-contrast: oklch(0.2 0.02 78);
   --color-danger: oklch(0.72 0.17 25);
+  --color-surface-raised: oklch(0.235 0.011 78);
+  --color-note: oklch(0.56 0.21 288);
+  --color-note-soft: oklch(0.6 0.16 254);
+  --color-note-edge: oklch(0.75 0.09 275);
 
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
