@@ -8,6 +8,8 @@ coverage/
 .agents/
 .commandcode/
 .pgdata/
+api/src/generated/
 .pgsock/
 scratch/
 .DS_Store
+*.tsbuildinfo
