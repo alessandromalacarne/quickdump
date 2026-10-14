@@ -3,6 +3,10 @@ export interface Tag {
   name: string;
 }
 
+export interface TagWithCount extends Tag {
+  count: number;
+}
+
 export interface Dump {
   id: string;
   content: string;
@@ -23,15 +27,29 @@ function errorMessage(body: unknown, status: number): string {
   return `Error ${status}`;
 }
 
-export async function createDump(content: string): Promise<Dump> {
-  const response = await fetch('/api/dumps', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-  });
+async function request(path: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(path, init);
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     throw new Error(errorMessage(body, response.status));
   }
+  return response;
+}
+
+export async function createDump(content: string): Promise<Dump> {
+  const response = await request('/api/dumps', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
   return (await response.json()) as Dump;
+}
+
+export async function listTags(): Promise<TagWithCount[]> {
+  const response = await request('/api/tags');
+  return (await response.json()) as TagWithCount[];
+}
+
+export async function deleteTag(id: string): Promise<void> {
+  await request(`/api/tags/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

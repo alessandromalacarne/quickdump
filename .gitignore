@@ -13,3 +13,6 @@ api/src/generated/
 scratch/
 .DS_Store
 *.tsbuildinfo
+lcov.info
+/.mido/
+.stryker-tmp

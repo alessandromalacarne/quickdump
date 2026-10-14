@@ -51,7 +51,9 @@ export function Composer({ onSubmit }: ComposerProps) {
         void submit();
       }}
       onClick={(event) => {
-        if ((event.target as HTMLElement).closest('button, textarea') === null) {
+        if (
+          (event.target as HTMLElement).closest('button, textarea') === null
+        ) {
           textareaRef.current?.focus();
         }
       }}
@@ -87,7 +89,9 @@ export function Composer({ onSubmit }: ComposerProps) {
         ) : saved ? (
           <p className="animate-fade-in text-sm text-ink-soft">dump saved</p>
         ) : (
-          <p className="text-sm text-ink-faint">Enter sends · at least one #tag</p>
+          <p className="text-sm text-ink-faint">
+            Enter sends · at least one #tag
+          </p>
         )}
 
         <button
