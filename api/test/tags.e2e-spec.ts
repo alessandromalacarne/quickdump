@@ -55,4 +55,39 @@ describe('Tags (e2e)', () => {
 
     expect(response.body).toEqual([]);
   });
+
+  it('deletes a tag without deleting its dumps', async () => {
+    await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#trabalho write the report' })
+      .expect(201);
+
+    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
+    const casa = tags.body.find((tag: { name: string }) => tag.name === 'casa');
+
+    await request(app.getHttpServer()).delete(`/tags/${casa.id}`).expect(204);
+
+    const remainingTags = await request(app.getHttpServer())
+      .get('/tags')
+      .expect(200);
+    expect(remainingTags.body.map((tag: { name: string }) => tag.name)).toEqual(
+      ['trabalho'],
+    );
+
+    const dumps = await request(app.getHttpServer()).get('/dumps').expect(200);
+    expect(dumps.body.map((dump: { content: string }) => dump.content)).toEqual(
+      ['#trabalho write the report', '#casa buy coffee'],
+    );
+    expect(dumps.body[1].tags).toEqual([]);
+  });
+
+  it('returns 404 when deleting a tag that does not exist', async () => {
+    await request(app.getHttpServer())
+      .delete('/tags/01920000-0000-7000-8000-000000000000')
+      .expect(404);
+  });
 });
