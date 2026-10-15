@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
-import { NavLink, Route, Routes } from 'react-router';
+import { NavLink, Route, Routes, useLocation } from 'react-router';
 import { createDump } from './api';
 import { Composer } from './components/Composer';
+import { TagDumpsPage } from './pages/TagDumpsPage';
 import { TagsPage } from './pages/TagsPage';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -12,6 +13,9 @@ function App() {
     await createDump(content);
   }, []);
 
+  const { pathname } = useLocation();
+  const onTagArea = pathname === '/tags' || pathname.startsWith('/tag/');
+
   return (
     <div className="flex h-dvh flex-col p-3 sm:p-5">
       <nav
@@ -21,7 +25,10 @@ function App() {
         <NavLink to="/" end className={navLinkClass}>
           dump
         </NavLink>
-        <NavLink to="/tags" className={navLinkClass}>
+        <NavLink
+          to="/tags"
+          className={() => navLinkClass({ isActive: onTagArea })}
+        >
           tags
         </NavLink>
       </nav>
@@ -38,6 +45,7 @@ function App() {
             }
           />
           <Route path="/tags" element={<TagsPage />} />
+          <Route path="/tag/:tag" element={<TagDumpsPage />} />
         </Routes>
       </main>
     </div>

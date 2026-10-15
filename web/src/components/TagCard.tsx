@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import type { TagWithCount } from '../api';
 
 interface TagCardProps {
@@ -32,19 +33,24 @@ export function TagCard({ tag, onDelete }: TagCardProps) {
       aria-label={`#${tag.name} (${dumps})`}
       className="group flex w-40 flex-col items-center justify-self-center gap-3 rounded-2xl border border-transparent p-4 transition-colors hover:bg-surface-raised focus-within:bg-surface-raised"
     >
-      <p className="flex flex-col items-center">
-        <span className="font-medium text-ink">#{tag.name}</span>
-        <span className="text-xs text-ink-faint">{dumps}</span>
-      </p>
-
-      <span
-        aria-hidden="true"
-        className="relative block h-20 w-28 transition-transform duration-200 group-hover:scale-105"
+      <Link
+        to={`/tag/${encodeURIComponent(tag.name)}`}
+        className="flex flex-col items-center gap-3 rounded-xl"
       >
-        <span className="absolute top-0 left-0 block h-12 w-20 -rotate-10 rounded-lg border border-note-edge/60 bg-note-soft" />
-        <span className="absolute top-2 left-3 block h-12 w-20 -rotate-2 rounded-lg border border-note-edge/60 bg-note-soft" />
-        <span className="absolute top-4 left-6 block h-12 w-20 rotate-8 rounded-lg border border-note-edge bg-note shadow-[0_4px_10px_oklch(0_0_0/0.4)]" />
-      </span>
+        <p className="flex flex-col items-center">
+          <span className="font-medium text-ink">#{tag.name}</span>
+          <span className="text-xs text-ink-faint">{dumps}</span>
+        </p>
+
+        <span
+          aria-hidden="true"
+          className="relative block h-20 w-28 transition-transform duration-200 group-hover:scale-105"
+        >
+          <span className="absolute top-0 left-0 block h-12 w-20 -rotate-10 rounded-lg border border-note-edge/60 bg-note-soft" />
+          <span className="absolute top-2 left-3 block h-12 w-20 -rotate-2 rounded-lg border border-note-edge/60 bg-note-soft" />
+          <span className="absolute top-4 left-6 block h-12 w-20 rotate-8 rounded-lg border border-note-edge bg-note shadow-[0_4px_10px_oklch(0_0_0/0.4)]" />
+        </span>
+      </Link>
 
       <button
         type="button"
