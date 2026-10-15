@@ -277,6 +277,51 @@ describe('running a workflow when a tag is deleted', () => {
   });
 });
 
+describe('running a workflow when an edit leaves a tag without dumps', () => {
+  it('runs the workflows scoped to the tag that dropped out', async () => {
+    const workflow = await createWorkflow({
+      name: 'tag dropped by an edit',
+      event: 'tagDeleted',
+      action: 'script',
+      config: { script: 'hello.sh' },
+      tags: ['casa'],
+    });
+    const dumpId = await createDump('#casa buy coffee');
+
+    await request(app.getHttpServer())
+      .patch(`/dumps/${dumpId}`)
+      .send({ content: '#trabalho buy coffee' })
+      .expect(200);
+
+    const run = await waitForRun(workflow.id, 'tagDeleted');
+    expect(run.status).toBe('success');
+    expect(run.trigger).toMatchObject({
+      kind: 'tagDeleted',
+      tag: { name: 'casa' },
+    });
+  });
+
+  it('runs them when the last dump of the tag is deleted', async () => {
+    const workflow = await createWorkflow({
+      name: 'tag dropped by a delete',
+      event: 'tagDeleted',
+      action: 'script',
+      config: { script: 'hello.sh' },
+      tags: ['casa'],
+    });
+    const dumpId = await createDump('#casa buy coffee');
+
+    await request(app.getHttpServer()).delete(`/dumps/${dumpId}`).expect(204);
+
+    const run = await waitForRun(workflow.id, 'tagDeleted');
+    expect(run.status).toBe('success');
+    expect(run.trigger).toMatchObject({
+      kind: 'tagDeleted',
+      tag: { name: 'casa' },
+    });
+  });
+});
+
 describe('running a workflow on demand', () => {
   it('runs the workflow and reports the new run', async () => {
     const workflow = await createWorkflow({
