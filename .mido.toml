@@ -1,16 +1,22 @@
 # .mido.toml — guardrails gate configuration
 version = 1
 
+# The typescript module measures with eslint: it injects max-lines,
+# max-lines-per-function, complexity and max-depth through each target's own
+# eslint.config.js. eslint, @typescript-eslint/parser and eslint-plugin-sonarjs
+# are devDependencies for these two gates only — linting stays oxlint's job.
 [size]
-tool         = "tokei"
+tool         = "eslint"
 file_loc     = { warn = 300, fail = 500 }
 function_loc = { warn = 40,  fail = 60  }
 complexity   = { warn = 10,  fail = 15  }
 nesting      = { warn = 3,   fail = 4   }
 
+# no mi_min: eslint reports no maintainability index, and a floor no reading can
+# back is INCOMPLETE, never a pass. Cognitive complexity comes from the
+# sonarjs/cognitive-complexity rule.
 [analysis]
-tool          = "rust-code-analysis"
-mi_min        = 20
+tool          = "eslint"
 cognitive_max = 15
 
 # web — vite + vitest, oxlint for lint, tsc for types
