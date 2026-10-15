@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { WorkflowDispatcherService } from '../workflows/workflow-dispatcher.service.js';
 
 @Injectable()
 export class TagsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dispatcher: WorkflowDispatcherService,
+  ) {}
 
   async list() {
     const tags = await this.prisma.tag.findMany({
@@ -19,10 +23,18 @@ export class TagsService {
   }
 
   async remove(id: string): Promise<void> {
-    const { count } = await this.prisma.tag.deleteMany({ where: { id } });
+    const tag = await this.prisma.tag.findUnique({ where: { id } });
 
-    if (count === 0) {
+    if (!tag) {
       throw new NotFoundException('Tag not found');
     }
+
+    await this.prisma.tag.delete({ where: { id } });
+
+    void this.dispatcher.dispatch({
+      kind: 'tagDeleted',
+      occurredAt: new Date().toISOString(),
+      tag: { id: tag.id, name: tag.name },
+    });
   }
 }
