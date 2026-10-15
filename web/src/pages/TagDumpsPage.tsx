@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { Link, useParams } from 'react-router';
-import { listDumps, type Dump } from '../api';
+import {
+  createDump,
+  deleteDump,
+  listDumps,
+  updateDump,
+  type Dump,
+} from '../api';
+import { Composer } from '../components/Composer';
 import { DumpCard } from '../components/DumpCard';
 
 function useTagDumps(tag: string) {
@@ -29,12 +36,58 @@ function useTagDumps(tag: string) {
     };
   }, [tag]);
 
-  return { dumps, error };
+  return { dumps, error, setDumps };
+}
+
+function carriesTag(dump: Dump, tag: string): boolean {
+  return dump.tags.some((dumpTag) => dumpTag.name === tag);
+}
+
+function useDumpActions(
+  tag: string,
+  setDumps: Dispatch<SetStateAction<Dump[] | null>>,
+) {
+  const target = tag.toLowerCase();
+
+  async function create(content: string) {
+    const created = await createDump(content);
+
+    if (carriesTag(created, target)) {
+      setDumps((current) =>
+        current === null ? current : [created, ...current],
+      );
+    }
+  }
+
+  async function update(id: string, content: string) {
+    const updated = await updateDump(id, content);
+
+    setDumps((current) => {
+      if (current === null) {
+        return current;
+      }
+      if (!carriesTag(updated, target)) {
+        return current.filter((dump) => dump.id !== id);
+      }
+
+      return current.map((dump) => (dump.id === id ? updated : dump));
+    });
+  }
+
+  async function remove(id: string) {
+    await deleteDump(id);
+    setDumps((current) =>
+      current === null ? current : current.filter((dump) => dump.id !== id),
+    );
+  }
+
+  return { create, update, remove };
 }
 
 export function TagDumpsPage() {
   const { tag = '' } = useParams();
-  const { dumps, error } = useTagDumps(tag);
+  const { dumps, error, setDumps } = useTagDumps(tag);
+  const { create, update, remove } = useDumpActions(tag, setDumps);
   const countLabel =
     dumps === null
       ? null
@@ -52,6 +105,10 @@ export function TagDumpsPage() {
           <p className="text-xs text-ink-faint">{countLabel}</p>
         )}
       </header>
+
+      <div className="mt-6 h-44 shrink-0">
+        <Composer initialValue={`#${tag} `} onSubmit={create} />
+      </div>
 
       {error ? (
         <p role="alert" className="mt-4 text-sm font-medium text-danger">
@@ -72,7 +129,12 @@ export function TagDumpsPage() {
       ) : (
         <ul className="mt-6 grid list-none gap-3">
           {dumps.map((dump) => (
-            <DumpCard key={dump.id} dump={dump} />
+            <DumpCard
+              key={dump.id}
+              dump={dump}
+              onUpdate={update}
+              onDelete={remove}
+            />
           ))}
         </ul>
       )}
