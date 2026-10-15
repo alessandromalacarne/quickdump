@@ -188,7 +188,9 @@ describe('TagDumpsPage create', () => {
     expect(textarea).toHaveValue('#casa ');
     expect(mockedListDumps).toHaveBeenCalledTimes(1);
   });
+});
 
+describe('TagDumpsPage create and the tag match', () => {
   it('matches the page tag ignoring case', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockResolvedValue({
@@ -248,7 +250,9 @@ describe('TagDumpsPage create', () => {
     expect(await findCards()).toHaveLength(2);
     expect(screen.getByText('2 dumps')).toBeInTheDocument();
   });
+});
 
+describe('TagDumpsPage create errors', () => {
   it('shows the composer error and keeps the draft when saving fails', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockRejectedValue(new Error('Database is down'));
@@ -318,7 +322,9 @@ describe('TagDumpsPage edit', () => {
     expect(mockedUpdateDump).toHaveBeenCalledWith('dump-1', 'buy tea #casa');
     expect(await screen.findByText('buy tea #casa')).toBeInTheDocument();
   });
+});
 
+describe('TagDumpsPage edit cancelling', () => {
   it('cancels the edit on Escape without calling the API', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -347,7 +353,9 @@ describe('TagDumpsPage edit', () => {
     expect(mockedUpdateDump).not.toHaveBeenCalled();
     expect(within(first!).getByText('buy coffee #casa')).toBeInTheDocument();
   });
+});
 
+describe('TagDumpsPage edit and the tag match', () => {
   it('drops the dump from the list when the tag leaves the content', async () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockResolvedValue({
@@ -371,7 +379,9 @@ describe('TagDumpsPage edit', () => {
     expect(within(cards[0]!).getByText(/fix the sink/)).toBeInTheDocument();
     expect(screen.queryByText('buy coffee #casa')).not.toBeInTheDocument();
   });
+});
 
+describe('TagDumpsPage edit errors', () => {
   it('shows the API error inside the card and keeps the draft', async () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockRejectedValue(new Error('Database is down'));
@@ -463,7 +473,9 @@ describe('TagDumpsPage delete', () => {
       within(second!).getByRole('button', { name: 'Confirm delete' }),
     ).toBeInTheDocument();
   });
+});
 
+describe('TagDumpsPage delete errors', () => {
   it('keeps the dump and shows the API error when the delete fails', async () => {
     const user = userEvent.setup();
     mockedDeleteDump.mockRejectedValue(new Error('Dump not found'));

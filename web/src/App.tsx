@@ -4,6 +4,7 @@ import { createDump } from './api';
 import { Composer } from './components/Composer';
 import { TagDumpsPage } from './pages/TagDumpsPage';
 import { TagsPage } from './pages/TagsPage';
+import { WorkflowsPage } from './pages/WorkflowsPage';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'text-ink' : 'text-ink-faint transition-colors hover:text-ink';
@@ -31,6 +32,9 @@ function App() {
         >
           tags
         </NavLink>
+        <NavLink to="/workflows" className={navLinkClass}>
+          workflows
+        </NavLink>
       </nav>
 
       <main className="flex min-h-0 flex-1 flex-col">
@@ -46,6 +50,7 @@ function App() {
           />
           <Route path="/tags" element={<TagsPage />} />
           <Route path="/tag/:tag" element={<TagDumpsPage />} />
+          <Route path="/workflows" element={<WorkflowsPage />} />
         </Routes>
       </main>
     </div>

@@ -12,14 +12,16 @@ A "dump" is a short note with at least one `#tag`. Type it, hit Enter, done. Dum
 ## Structure
 
 ```
-api/                 REST API (dumps + tags)
+api/                 REST API (dumps + tags + workflows)
   prisma/            schema and migrations
   src/dumps/         POST /dumps, GET /dumps?tag=, PATCH /dumps/:id, DELETE /dumps/:id
-  src/tags/          GET /tags
+  src/tags/          GET /tags, DELETE /tags/:id
+  src/workflows/     rules engine: triggers, actions, scheduler, run history
   test/              e2e tests (supertest + real Postgres)
-web/                 SPA: single full-screen composer, dark theme
+web/                 SPA: composer, tag pages, workflows page, dark theme
 scripts/pg.sh        Local Postgres via nix (init/start/stop/reset)
 scripts/prisma.sh    Prisma CLI wrapper (schema-engine from nixpkgs)
+scripts/workflows/   scripts a workflow may run (see its README)
 compose.yaml         Postgres via Docker, alternative to pg.sh
 flake.nix            devShell (Node 24 + Postgres + Prisma engines)
 ```
@@ -59,28 +61,64 @@ Vite proxies `/api` to `localhost:3000`.
 ## Tests
 
 ```bash
-cd api && npm test           # unit (tag parser)
+cd api && npm test           # unit (tag parser, triggers, cron, export format, scripts)
 cd api && npm run test:e2e   # e2e with real Postgres (uses quickdump_test)
 cd web && npm test           # components and flows (jsdom + Testing Library)
 ```
 
 ## API
 
-| Method | Route            | Description                               |
-| ------ | ---------------- | ----------------------------------------- |
-| POST   | `/dumps`         | Creates a dump. `{ "content": "... #tag" }` → 201 |
-| GET    | `/dumps`         | Lists dumps, newest first                 |
-| GET    | `/dumps?tag=home`| Filters by tag (case-insensitive)         |
-| PATCH  | `/dumps/:id`     | Replaces the content. `{ "content": "... #tag" }` → 200 |
-| DELETE | `/dumps/:id`     | Deletes a dump → 204                      |
-| GET    | `/tags`          | Tags with counts, most used first         |
+| Method | Route                    | Description                                        |
+| ------ | ------------------------ | -------------------------------------------------- |
+| POST   | `/dumps`                 | Creates a dump. `{ "content": "... #tag" }` → 201 |
+| GET    | `/dumps`                 | Lists dumps, newest first                          |
+| GET    | `/dumps?tag=home`        | Filters by tag (case-insensitive)                  |
+| PATCH  | `/dumps/:id`             | Replaces the content. `{ "content": "... #tag" }` → 200 |
+| DELETE | `/dumps/:id`             | Deletes a dump → 204                               |
+| GET    | `/tags`                  | Tags with counts, most used first                  |
+| DELETE | `/tags/:id`              | Deletes a tag, keeps its dumps → 204               |
+| GET    | `/workflows`             | Workflow rules with their tag scope                |
+| POST   | `/workflows`             | Creates a rule → 201                               |
+| PATCH  | `/workflows/:id`         | Edits a rule, enables/disables it                  |
+| DELETE | `/workflows/:id`         | Deletes a rule and its run history → 204           |
+| GET    | `/workflows/:id/runs`    | Run history, newest first (`?limit=`, max 100)     |
+| POST   | `/workflows/:id/run`     | Runs it right now → 202 `{ "runId": "…" }`         |
+| GET    | `/scripts`               | Scripts available to workflows, with descriptions  |
 
 Validation errors return 400. Dump without a tag: `{"message": "Include at least one #tag in the dump"}`. Unknown dump on PATCH/DELETE: 404 `{"message": "Dump not found"}`.
 
+## Workflows
+
+A workflow is a rule: **when** something happens, **do** something.
+
+```jsonc
+// when a dump lands on #casa, run scripts/workflows/notify.sh
+{ "name": "notify casa", "event": "dumpCreated", "tags": ["casa"],
+  "action": "script", "config": { "script": "notify.sh", "args": ["--quiet"] } }
+
+// every day at 23:59, write the day's #casa dumps to a text file
+{ "name": "daily casa export", "cron": "59 23 * * *", "timezone": "America/Sao_Paulo",
+  "tags": ["casa"], "action": "export", "config": { "window": "day" } }
+```
+
+- **Triggers** — `event` (`dumpCreated`, `tagDeleted`) or `cron` + `timezone`, never both.
+- **Tag scope** — `tags: []` means every tag. It filters the event *and* what an export covers.
+- **Actions** — `script` (a file from `scripts/workflows/`, optional `args`, `cwd`, `timeoutMs`)
+  or `export` (a plain text file of the window's dumps, `window` being `sinceLastRun`, `day` or `all`).
+- Reports are kept per run: status, exit code, `stdout`, `stderr` and the file written.
+- A failed workflow never fails the request that triggered it — the dump is saved either way.
+- If the API was down when a schedule was due, it catches up once on the next start, over the
+  whole missed window.
+- Scheduled runs are polled every 30s (`QUICKDUMP_SCHEDULER=off` turns the poller off).
+
+⚠️ A workflow runs a script with the API's own privileges, and the API has no authentication.
+It binds to `127.0.0.1` by default for that reason — set `HOST=0.0.0.0` only if you trust
+everything that can reach the port. See `scripts/workflows/README.md` for the script contract.
+
 ## Notes
 
-- Tags are extracted from the content itself (`#home` → `home`), lowercased, no duplicates. A tag whose last dump is edited away or deleted is removed from `/tags`.
-- Web UI: dark theme, single screen with the composer (Enter sends, Shift+Enter breaks the line, clicking anywhere focuses the field).
+- Tags are extracted from the content itself (`#home` → `home`), lowercased, no duplicates. A tag whose last dump is edited away or deleted is removed from `/tags`, and a workflow watching that tag hears about it like any other deletion.
+- Web UI: dark theme, composer (Enter sends, Shift+Enter breaks the line, clicking anywhere focuses the field), tag pages and a workflows page to create rules and read their runs.
 - `/tag/:tag` lists the dumps of a tag with a composer pre-filled with the tag, inline editing and delete behind a `confirm?` step.
 - Single-user: no authentication in this version.
 - On NixOS, Prisma needs the `schema-engine` from nixpkgs, so database commands go through `scripts/prisma.sh`.

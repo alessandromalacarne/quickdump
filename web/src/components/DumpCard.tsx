@@ -6,6 +6,15 @@ const dateFormat = new Intl.DateTimeFormat('en-US', {
   timeStyle: 'short',
 });
 
+const iconButtonClass =
+  'flex h-10 w-10 items-center justify-center rounded-full text-ink-faint transition-[color,opacity,background-color] hover:bg-paper focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100 disabled:cursor-not-allowed disabled:opacity-50';
+
+const solidButtonClass =
+  'inline-flex min-h-9 items-center rounded-full bg-mark px-4 text-sm font-semibold text-mark-contrast transition-[filter] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
+
+const ghostButtonClass =
+  'inline-flex min-h-9 items-center rounded-full px-4 text-sm text-ink-soft transition-colors hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-50';
+
 function PencilIcon() {
   return (
     <svg
@@ -42,16 +51,17 @@ function TrashIcon() {
   );
 }
 
-const iconButtonClass =
-  'flex h-10 w-10 items-center justify-center rounded-full text-ink-faint transition-[color,opacity,background-color] hover:bg-paper focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100 disabled:cursor-not-allowed disabled:opacity-50';
-
 interface DumpCardProps {
   dump: Dump;
   onUpdate: (id: string, content: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
+function failureOf(cause: unknown, fallback: string): string {
+  return cause instanceof Error ? cause.message : fallback;
+}
+
+function useDumpEditor({ dump, onUpdate, onDelete }: DumpCardProps) {
   const [draft, setDraft] = useState(dump.content);
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -69,6 +79,13 @@ export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
     setError(null);
   }
 
+  function changeDraft(value: string) {
+    setDraft(value);
+    if (error) {
+      setError(null);
+    }
+  }
+
   async function save() {
     setError(null);
     setBusy(true);
@@ -76,9 +93,7 @@ export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
       await onUpdate(dump.id, draft.trim());
       setEditing(false);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Could not update the dump',
-      );
+      setError(failureOf(cause, 'Could not update the dump'));
     } finally {
       setBusy(false);
     }
@@ -91,69 +106,153 @@ export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
       await onDelete(dump.id);
     } catch (cause) {
       setConfirming(false);
-      setError(
-        cause instanceof Error ? cause.message : 'Could not delete the dump',
-      );
+      setError(failureOf(cause, 'Could not delete the dump'));
       setBusy(false);
     }
   }
 
+  return {
+    draft,
+    editing,
+    confirming,
+    busy,
+    error,
+    startEditing,
+    cancelEditing,
+    changeDraft,
+    save,
+    remove,
+    setConfirming,
+  };
+}
+
+function EditForm({
+  draft,
+  busy,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  draft: string;
+  busy: boolean;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <>
+      <textarea
+        autoFocus
+        rows={3}
+        disabled={busy}
+        aria-label="Edit dump"
+        value={draft}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            onCancel();
+          }
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            onSave();
+          }
+        }}
+        className="w-full resize-y rounded-xl border border-line bg-paper p-3 leading-relaxed text-ink focus:border-mark focus:outline-none disabled:opacity-60"
+      />
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onSave}
+          className={solidButtonClass}
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCancel}
+          className={ghostButtonClass}
+        >
+          Cancel
+        </button>
+      </div>
+    </>
+  );
+}
+
+function DumpActions({
+  busy,
+  confirming,
+  onEdit,
+  onConfirming,
+  onDelete,
+}: {
+  busy: boolean;
+  confirming: boolean;
+  onEdit: () => void;
+  onConfirming: (value: boolean) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label="Edit dump"
+        className={`${iconButtonClass} hover:text-ink`}
+      >
+        <PencilIcon />
+      </button>
+
+      {confirming ? (
+        <button
+          type="button"
+          disabled={busy}
+          aria-label="Confirm delete"
+          onBlur={() => onConfirming(false)}
+          onClick={onDelete}
+          className="inline-flex min-h-10 items-center rounded-full bg-paper px-3 text-xs font-medium text-danger transition-[filter] hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          confirm?
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onConfirming(true)}
+          aria-label="Delete dump"
+          className={`${iconButtonClass} hover:text-danger`}
+        >
+          <TrashIcon />
+        </button>
+      )}
+    </>
+  );
+}
+
+export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
+  const editor = useDumpEditor({ dump, onUpdate, onDelete });
+
   return (
     <li className="group rounded-2xl border border-line bg-surface-raised p-5">
-      {editing ? (
-        <>
-          <textarea
-            autoFocus
-            rows={3}
-            disabled={busy}
-            aria-label="Edit dump"
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              if (error) {
-                setError(null);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                cancelEditing();
-              }
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                void save();
-              }
-            }}
-            className="w-full resize-y rounded-xl border border-line bg-paper p-3 leading-relaxed text-ink focus:border-mark focus:outline-none disabled:opacity-60"
-          />
-
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void save()}
-              className="inline-flex min-h-9 items-center rounded-full bg-mark px-4 text-sm font-semibold text-mark-contrast transition-[filter] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={cancelEditing}
-              className="inline-flex min-h-9 items-center rounded-full px-4 text-sm text-ink-soft transition-colors hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </>
+      {editor.editing ? (
+        <EditForm
+          draft={editor.draft}
+          busy={editor.busy}
+          onChange={editor.changeDraft}
+          onSave={() => void editor.save()}
+          onCancel={editor.cancelEditing}
+        />
       ) : (
         <p className="whitespace-pre-wrap leading-relaxed text-ink">
           {dump.content}
         </p>
       )}
 
-      {error ? (
+      {editor.error ? (
         <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {error}
+          {editor.error}
         </p>
       ) : null}
 
@@ -172,39 +271,14 @@ export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
             {dateFormat.format(new Date(dump.createdAt))}
           </time>
 
-          {editing ? null : (
-            <>
-              <button
-                type="button"
-                onClick={startEditing}
-                aria-label="Edit dump"
-                className={`${iconButtonClass} hover:text-ink`}
-              >
-                <PencilIcon />
-              </button>
-
-              {confirming ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label="Confirm delete"
-                  onBlur={() => setConfirming(false)}
-                  onClick={() => void remove()}
-                  className="inline-flex min-h-10 items-center rounded-full bg-paper px-3 text-xs font-medium text-danger transition-[filter] hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  confirm?
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirming(true)}
-                  aria-label="Delete dump"
-                  className={`${iconButtonClass} hover:text-danger`}
-                >
-                  <TrashIcon />
-                </button>
-              )}
-            </>
+          {editor.editing ? null : (
+            <DumpActions
+              busy={editor.busy}
+              confirming={editor.confirming}
+              onEdit={editor.startEditing}
+              onConfirming={editor.setConfirming}
+              onDelete={() => void editor.remove()}
+            />
           )}
         </div>
       </footer>
