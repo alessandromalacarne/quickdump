@@ -187,7 +187,9 @@ describe('updating a dump', () => {
       { id: expect.any(String), name: 'urgente', count: 1 },
     ]);
   });
+});
 
+describe('rejecting an invalid update', () => {
   it('rejects an update without any tag and keeps the dump untouched', async () => {
     const created = await request(app.getHttpServer())
       .post('/dumps')
