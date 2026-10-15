@@ -14,7 +14,7 @@ A "dump" is a short note with at least one `#tag`. Type it, hit Enter, done. Dum
 ```
 api/                 REST API (dumps + tags)
   prisma/            schema and migrations
-  src/dumps/         POST /dumps, GET /dumps?tag=
+  src/dumps/         POST /dumps, GET /dumps?tag=, PATCH /dumps/:id, DELETE /dumps/:id
   src/tags/          GET /tags
   test/              e2e tests (supertest + real Postgres)
 web/                 SPA: single full-screen composer, dark theme
@@ -71,14 +71,17 @@ cd web && npm test           # components and flows (jsdom + Testing Library)
 | POST   | `/dumps`         | Creates a dump. `{ "content": "... #tag" }` → 201 |
 | GET    | `/dumps`         | Lists dumps, newest first                 |
 | GET    | `/dumps?tag=home`| Filters by tag (case-insensitive)         |
+| PATCH  | `/dumps/:id`     | Replaces the content. `{ "content": "... #tag" }` → 200 |
+| DELETE | `/dumps/:id`     | Deletes a dump → 204                      |
 | GET    | `/tags`          | Tags with counts, most used first         |
 
-Validation errors return 400. Dump without a tag: `{"message": "Include at least one #tag in the dump"}`.
+Validation errors return 400. Dump without a tag: `{"message": "Include at least one #tag in the dump"}`. Unknown dump on PATCH/DELETE: 404 `{"message": "Dump not found"}`.
 
 ## Notes
 
-- Tags are extracted from the content itself (`#home` → `home`), lowercased, no duplicates.
-- Web UI: dark theme, single screen with the composer (Enter sends, Shift+Enter breaks the line, clicking anywhere focuses the field). Retrieval by tag is API-only for now (`GET /dumps?tag=`).
+- Tags are extracted from the content itself (`#home` → `home`), lowercased, no duplicates. A tag whose last dump is edited away or deleted is removed from `/tags`.
+- Web UI: dark theme, single screen with the composer (Enter sends, Shift+Enter breaks the line, clicking anywhere focuses the field).
+- `/tag/:tag` lists the dumps of a tag with a composer pre-filled with the tag, inline editing and delete behind a `confirm?` step.
 - Single-user: no authentication in this version.
 - On NixOS, Prisma needs the `schema-engine` from nixpkgs, so database commands go through `scripts/prisma.sh`.
 - The `flake.nix` devShell exports `PRISMA_SCHEMA_ENGINE_BINARY`, so plain `npx prisma` also works inside `nix develop`.
