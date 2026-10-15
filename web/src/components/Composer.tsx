@@ -5,15 +5,21 @@ interface ComposerProps {
   onSubmit: (content: string) => Promise<void>;
 }
 
-export function Composer({ onSubmit }: ComposerProps) {
+function useComposer(onSubmit: (content: string) => Promise<void>) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const savedTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => () => window.clearTimeout(savedTimer.current), []);
+
+  function change(next: string) {
+    setValue(next);
+    if (error) {
+      setError(null);
+    }
+  }
 
   async function submit() {
     const content = value.trim();
@@ -43,6 +49,45 @@ export function Composer({ onSubmit }: ComposerProps) {
     }
   }
 
+  return { value, error, saved, busy, change, submit };
+}
+
+interface ComposerFooterProps {
+  error: string | null;
+  saved: boolean;
+  busy: boolean;
+}
+
+function ComposerFooter({ error, saved, busy }: ComposerFooterProps) {
+  return (
+    <div className="flex min-h-16 items-center gap-4 border-t border-line px-4 py-3 sm:px-6">
+      {error ? (
+        <p role="alert" className="text-sm font-medium text-danger">
+          {error}
+        </p>
+      ) : saved ? (
+        <p className="animate-fade-in text-sm text-ink-soft">dump saved</p>
+      ) : (
+        <p className="text-sm text-ink-faint">
+          Enter sends · at least one #tag
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={busy}
+        className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-full bg-mark px-6 font-semibold text-mark-contrast transition-[filter] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Dump
+      </button>
+    </div>
+  );
+}
+
+export function Composer({ onSubmit }: ComposerProps) {
+  const { value, error, saved, busy, change, submit } = useComposer(onSubmit);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   return (
     <form
       aria-label="New dump"
@@ -65,12 +110,7 @@ export function Composer({ onSubmit }: ComposerProps) {
         aria-label="New dump"
         placeholder="Write what's on your mind... and tag it with #tag"
         value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          if (error) {
-            setError(null);
-          }
-        }}
+        onChange={(event) => change(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
@@ -81,27 +121,7 @@ export function Composer({ onSubmit }: ComposerProps) {
         className="min-h-0 w-full flex-1 resize-none bg-transparent p-5 text-lg leading-relaxed text-ink placeholder:text-ink-faint focus:outline-none disabled:opacity-60 sm:p-8 sm:text-xl"
       />
 
-      <div className="flex min-h-16 items-center gap-4 border-t border-line px-4 py-3 sm:px-6">
-        {error ? (
-          <p role="alert" className="text-sm font-medium text-danger">
-            {error}
-          </p>
-        ) : saved ? (
-          <p className="animate-fade-in text-sm text-ink-soft">dump saved</p>
-        ) : (
-          <p className="text-sm text-ink-faint">
-            Enter sends · at least one #tag
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-full bg-mark px-6 font-semibold text-mark-contrast transition-[filter] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Dump
-        </button>
-      </div>
+      <ComposerFooter error={error} saved={saved} busy={busy} />
     </form>
   );
 }
