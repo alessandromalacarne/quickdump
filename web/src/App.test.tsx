@@ -7,9 +7,11 @@ import { createDump, listDumps, listTags } from './api';
 
 vi.mock('./api', () => ({
   createDump: vi.fn(),
+  deleteDump: vi.fn(),
+  deleteTag: vi.fn(),
   listDumps: vi.fn(),
   listTags: vi.fn(),
-  deleteTag: vi.fn(),
+  updateDump: vi.fn(),
 }));
 
 const mockedCreateDump = vi.mocked(createDump);
@@ -132,9 +134,9 @@ describe('tag pages', () => {
     renderApp('/tag/casa');
 
     expect(await screen.findByText('buy coffee #casa')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('textbox', { name: /dump/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue(
+      '#casa ',
+    );
   });
 
   it('opens the dumps of a tag clicked on the tags page', async () => {
