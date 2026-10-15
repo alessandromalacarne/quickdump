@@ -13,6 +13,8 @@ export default defineConfig({
       DATABASE_URL:
         process.env.TEST_DATABASE_URL ??
         'postgresql://postgres:postgres@localhost:5432/quickdump_test',
+      // Tests drive the scheduler through `tick()` instead of a live timer.
+      QUICKDUMP_SCHEDULER: 'off',
     },
   },
 });
