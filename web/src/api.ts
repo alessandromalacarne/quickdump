@@ -50,6 +50,19 @@ export async function listDumps(tag: string): Promise<Dump[]> {
   return (await response.json()) as Dump[];
 }
 
+export async function updateDump(id: string, content: string): Promise<Dump> {
+  const response = await request(`/api/dumps/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  return (await response.json()) as Dump;
+}
+
+export async function deleteDump(id: string): Promise<void> {
+  await request(`/api/dumps/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 export async function listTags(): Promise<TagWithCount[]> {
   const response = await request('/api/tags');
   return (await response.json()) as TagWithCount[];
