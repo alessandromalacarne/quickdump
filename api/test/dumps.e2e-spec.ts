@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { createTestApp, truncateAll } from './test-app.js';
@@ -117,5 +118,173 @@ describe('listing dumps', () => {
     expect(
       response.body.map((dump: { content: string }) => dump.content),
     ).toEqual(['#Casa another item', '#casa home item']);
+  });
+});
+
+describe('updating a dump', () => {
+  it('updates the content and keeps the creation date', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: '#casa buy tea' })
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      id: created.body.id,
+      content: '#casa buy tea',
+      createdAt: created.body.createdAt,
+    });
+    expect(response.body.tags).toEqual([
+      { id: created.body.tags[0].id, name: 'casa' },
+    ]);
+  });
+
+  it('replaces the tags that are no longer in the content', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa #trabalho buy coffee' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: '#trabalho buy coffee' })
+      .expect(200);
+
+    expect(response.body.tags).toEqual([
+      { id: expect.any(String), name: 'trabalho' },
+    ]);
+
+    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
+
+    expect(tags.body).toEqual([
+      { id: expect.any(String), name: 'trabalho', count: 1 },
+    ]);
+  });
+
+  it('connects the tags added to the content', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: '#casa buy coffee #urgente' })
+      .expect(200);
+
+    expect(
+      response.body.tags.map((tag: { name: string }) => tag.name).sort(),
+    ).toEqual(['casa', 'urgente']);
+
+    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
+
+    expect(tags.body).toEqual([
+      { id: expect.any(String), name: 'casa', count: 1 },
+      { id: expect.any(String), name: 'urgente', count: 1 },
+    ]);
+  });
+
+  it('rejects an update without any tag and keeps the dump untouched', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: 'text without a tag' })
+      .expect(400);
+
+    expect(response.body.message).toBe('Include at least one #tag in the dump');
+
+    const dumps = await request(app.getHttpServer()).get('/dumps').expect(200);
+
+    expect(dumps.body).toMatchObject([
+      { id: created.body.id, content: '#casa buy coffee' },
+    ]);
+  });
+
+  it('rejects empty or blank content', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: '' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .patch(`/dumps/${created.body.id}`)
+      .send({ content: '   ' })
+      .expect(400);
+  });
+
+  it('returns 404 for an unknown dump', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/dumps/${randomUUID()}`)
+      .send({ content: '#casa buy coffee' })
+      .expect(404);
+
+    expect(response.body.message).toBe('Dump not found');
+  });
+});
+
+describe('deleting a dump', () => {
+  it('removes the dump from the lists', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa buy coffee' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/dumps/${created.body.id}`)
+      .expect(204);
+
+    const all = await request(app.getHttpServer()).get('/dumps').expect(200);
+
+    expect(all.body).toEqual([]);
+
+    const byTag = await request(app.getHttpServer())
+      .get('/dumps?tag=casa')
+      .expect(200);
+
+    expect(byTag.body).toEqual([]);
+  });
+
+  it('returns 404 for an unknown dump', async () => {
+    const response = await request(app.getHttpServer())
+      .delete(`/dumps/${randomUUID()}`)
+      .expect(404);
+
+    expect(response.body.message).toBe('Dump not found');
+  });
+
+  it('keeps the tags other dumps still use and drops the empty ones', async () => {
+    await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#casa #trabalho item one' })
+      .expect(201);
+
+    const removed = await request(app.getHttpServer())
+      .post('/dumps')
+      .send({ content: '#lazer item two' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/dumps/${removed.body.id}`)
+      .expect(204);
+
+    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
+
+    expect(tags.body).toEqual([
+      { id: expect.any(String), name: 'casa', count: 1 },
+      { id: expect.any(String), name: 'trabalho', count: 1 },
+    ]);
   });
 });
