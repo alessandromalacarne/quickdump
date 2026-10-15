@@ -3,10 +3,14 @@ import { extractTags } from '../lib/extract-tags';
 
 interface ComposerProps {
   onSubmit: (content: string) => Promise<void>;
+  initialValue?: string;
 }
 
-function useComposer(onSubmit: (content: string) => Promise<void>) {
-  const [value, setValue] = useState('');
+function useComposer(
+  onSubmit: (content: string) => Promise<void>,
+  initialValue: string,
+) {
+  const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -36,7 +40,7 @@ function useComposer(onSubmit: (content: string) => Promise<void>) {
     setBusy(true);
     try {
       await onSubmit(content);
-      setValue('');
+      setValue(initialValue);
       setSaved(true);
       window.clearTimeout(savedTimer.current);
       savedTimer.current = window.setTimeout(() => setSaved(false), 1600);
@@ -84,8 +88,11 @@ function ComposerFooter({ error, saved, busy }: ComposerFooterProps) {
   );
 }
 
-export function Composer({ onSubmit }: ComposerProps) {
-  const { value, error, saved, busy, change, submit } = useComposer(onSubmit);
+export function Composer({ onSubmit, initialValue = '' }: ComposerProps) {
+  const { value, error, saved, busy, change, submit } = useComposer(
+    onSubmit,
+    initialValue,
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (

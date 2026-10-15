@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createDump,
   createWorkflow,
+  deleteDump,
   deleteTag,
   deleteWorkflow,
   listDumps,
@@ -10,6 +11,7 @@ import {
   listWorkflowRuns,
   listWorkflows,
   runWorkflowNow,
+  updateDump,
   updateWorkflow,
 } from './api';
 
@@ -343,5 +345,92 @@ describe('listScripts', () => {
       { name: 'notify.sh', description: 'Notifies me' },
     ]);
     expect(fetchMock).toHaveBeenCalledWith('/api/scripts', undefined);
+  });
+});
+
+describe('updateDump', () => {
+  it('patches the content and returns the updated dump', async () => {
+    const dump = {
+      id: 'dump-1',
+      content: '#casa buy tea',
+      createdAt: '2026-10-14T00:00:00.000Z',
+      tags: [{ id: 'tag-1', name: 'casa' }],
+    };
+    const fetchMock = stubFetch(jsonResponse(dump));
+
+    await expect(updateDump('dump-1', '#casa buy tea')).resolves.toEqual(dump);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/dumps/dump-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '#casa buy tea' }),
+    });
+  });
+
+  it('encodes the dump id into the path', async () => {
+    const fetchMock = stubFetch(
+      jsonResponse({
+        id: 'dump/with space',
+        content: '#casa buy coffee',
+        createdAt: '2026-10-14T00:00:00.000Z',
+        tags: [{ id: 'tag-1', name: 'casa' }],
+      }),
+    );
+
+    await updateDump('dump/with space', '#casa buy coffee');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/dumps/dump%2Fwith%20space',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+  });
+
+  it('throws the API message when the dump is gone', async () => {
+    stubFetch(jsonResponse({ message: 'Dump not found' }, { status: 404 }));
+
+    await expect(updateDump('dump-1', '#casa buy tea')).rejects.toThrow(
+      'Dump not found',
+    );
+  });
+
+  it('takes the first message of a validation error', async () => {
+    stubFetch(
+      jsonResponse(
+        { message: ['content should not be empty'] },
+        { status: 400 },
+      ),
+    );
+
+    await expect(updateDump('dump-1', '')).rejects.toThrow(
+      'content should not be empty',
+    );
+  });
+});
+
+describe('deleteDump', () => {
+  it('sends a DELETE for the dump id', async () => {
+    const fetchMock = stubFetch(new Response(null, { status: 204 }));
+
+    await expect(deleteDump('dump-1')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith('/api/dumps/dump-1', {
+      method: 'DELETE',
+    });
+  });
+
+  it('encodes the dump id into the path', async () => {
+    const fetchMock = stubFetch(new Response(null, { status: 204 }));
+
+    await deleteDump('dump/with space');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/dumps/dump%2Fwith%20space',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('throws the API message when the dump is gone', async () => {
+    stubFetch(jsonResponse({ message: 'Dump not found' }, { status: 404 }));
+
+    await expect(deleteDump('dump-1')).rejects.toThrow('Dump not found');
   });
 });
