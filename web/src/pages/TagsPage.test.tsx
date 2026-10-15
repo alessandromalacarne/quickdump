@@ -63,16 +63,9 @@ describe('TagsPage', () => {
       '/',
     );
   });
+});
 
-  it('shows the API error when the tags cannot be loaded', async () => {
-    mockedListTags.mockRejectedValue(new Error('Database is down'));
-    renderPage();
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Database is down',
-    );
-  });
-
+describe('TagsPage deletion', () => {
   it('deletes a tag and drops it from the grid', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -91,6 +84,17 @@ describe('TagsPage', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('#casa')).not.toBeInTheDocument();
     expect(mockedListTags).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TagsPage errors', () => {
+  it('shows the API error when the tags cannot be loaded', async () => {
+    mockedListTags.mockRejectedValue(new Error('Database is down'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Database is down',
+    );
   });
 
   it('keeps the tag and shows the error when deleting fails', async () => {

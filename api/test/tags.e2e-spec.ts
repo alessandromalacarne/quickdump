@@ -3,22 +3,22 @@ import request from 'supertest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { createTestApp, truncateAll } from './test-app.js';
 
-describe('Tags (e2e)', () => {
-  let app: INestApplication;
-  let prisma: PrismaService;
+let app: INestApplication;
+let prisma: PrismaService;
 
-  beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
-  });
+beforeAll(async () => {
+  ({ app, prisma } = await createTestApp());
+});
 
-  beforeEach(async () => {
-    await truncateAll(prisma);
-  });
+beforeEach(async () => {
+  await truncateAll(prisma);
+});
 
-  afterAll(async () => {
-    await app.close();
-  });
+afterAll(async () => {
+  await app.close();
+});
 
+describe('listing tags', () => {
   it('lists tags with counts, most used first and tie-broken by name', async () => {
     await request(app.getHttpServer())
       .post('/dumps')
@@ -55,7 +55,9 @@ describe('Tags (e2e)', () => {
 
     expect(response.body).toEqual([]);
   });
+});
 
+describe('deleting tags', () => {
   it('deletes a tag without deleting its dumps', async () => {
     await request(app.getHttpServer())
       .post('/dumps')

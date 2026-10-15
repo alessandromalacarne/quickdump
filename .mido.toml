@@ -19,8 +19,10 @@ format    = ["npx", "--no-install", "prettier", "--check", "."]
 lint      = ["npx", "oxlint"]
 typecheck = ["npx", "tsc", "-b"]
 
+# `--no-color`: the gate reads the reporter's own `Tests N passed` line, and an
+# ANSI-wrapped summary never matches mido 0.3.0's pattern (false FAIL, exit 0).
 [targets.web.tests]
-command      = ["npx", "vitest", "run"]
+command      = ["npx", "vitest", "run", "--no-color"]
 timeout_secs = 900
 
 [targets.web.coverage]
@@ -30,8 +32,10 @@ coverage_min = 80
 # stryker ignores the repo's stryker.config.json here: mido layers it through an
 # `extends` key stryker does not implement, so the runner and the timeout come
 # from these flags instead. Drop them once mido merges the repo config itself.
+# `--timeoutMS 60000`: on this shared box (load spikes past 30) a mutant can
+# clear 30s without hanging — a short timeout turns real verdicts into INCOMPLETE.
 [targets.web.mutation]
-command = ["npx", "--no-install", "stryker", "run", "--testRunner", "vitest", "--timeoutMS", "30000"]
+command = ["npx", "--no-install", "stryker", "run", "--testRunner", "vitest", "--timeoutMS", "60000"]
 
 # api — nest + vitest e2e (postgres), oxlint --type-aware for lint, tsc for types
 [targets.api.syntax]
@@ -39,8 +43,9 @@ format    = ["npx", "--no-install", "prettier", "--check", "src", "test"]
 lint      = ["npx", "oxlint", "--type-aware", "src/", "test/"]
 typecheck = ["npx", "tsc", "--noEmit", "-p", "tsconfig.json"]
 
+# `--no-color`: same reporter-summary parse as the web target above.
 [targets.api.tests]
-command      = ["npx", "vitest", "run", "--config", "./vitest.config.e2e.ts"]
+command      = ["npx", "vitest", "run", "--config", "./vitest.config.e2e.ts", "--no-color"]
 timeout_secs = 900
 
 [targets.api.coverage]

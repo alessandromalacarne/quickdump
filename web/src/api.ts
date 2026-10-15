@@ -45,6 +45,11 @@ export async function createDump(content: string): Promise<Dump> {
   return (await response.json()) as Dump;
 }
 
+export async function listDumps(tag: string): Promise<Dump[]> {
+  const response = await request(`/api/dumps?tag=${encodeURIComponent(tag)}`);
+  return (await response.json()) as Dump[];
+}
+
 export async function listTags(): Promise<TagWithCount[]> {
   const response = await request('/api/tags');
   return (await response.json()) as TagWithCount[];

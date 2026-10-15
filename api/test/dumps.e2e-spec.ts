@@ -3,22 +3,22 @@ import request from 'supertest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { createTestApp, truncateAll } from './test-app.js';
 
-describe('Dumps (e2e)', () => {
-  let app: INestApplication;
-  let prisma: PrismaService;
+let app: INestApplication;
+let prisma: PrismaService;
 
-  beforeAll(async () => {
-    ({ app, prisma } = await createTestApp());
-  });
+beforeAll(async () => {
+  ({ app, prisma } = await createTestApp());
+});
 
-  beforeEach(async () => {
-    await truncateAll(prisma);
-  });
+beforeEach(async () => {
+  await truncateAll(prisma);
+});
 
-  afterAll(async () => {
-    await app.close();
-  });
+afterAll(async () => {
+  await app.close();
+});
 
+describe('creating a dump', () => {
   it('creates a dump with the tag extracted from the content', async () => {
     const response = await request(app.getHttpServer())
       .post('/dumps')
@@ -70,7 +70,9 @@ describe('Dumps (e2e)', () => {
       .send({ content: '   ' })
       .expect(400);
   });
+});
 
+describe('listing dumps', () => {
   it('lists dumps newest first', async () => {
     await request(app.getHttpServer())
       .post('/dumps')

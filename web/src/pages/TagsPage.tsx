@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { listTags, deleteTag, type TagWithCount } from '../api';
 import { TagCard } from '../components/TagCard';
 
-export function TagsPage() {
+function useTagList() {
   const [tags, setTags] = useState<TagWithCount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +29,12 @@ export function TagsPage() {
     };
   }, []);
 
+  return { tags, error, setTags, setError };
+}
+
+function useTags() {
+  const { tags, error, setTags, setError } = useTagList();
+
   async function remove(id: string) {
     try {
       await deleteTag(id);
@@ -42,6 +48,12 @@ export function TagsPage() {
       );
     }
   }
+
+  return { tags, error, remove };
+}
+
+export function TagsPage() {
+  const { tags, error, remove } = useTags();
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-line bg-surface p-5 sm:p-8">

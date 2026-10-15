@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createDump, deleteTag, listTags } from './api';
+import { createDump, deleteTag, listDumps, listTags } from './api';
 
 function jsonResponse(body: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(body), {
@@ -48,6 +48,40 @@ describe('createDump', () => {
   });
 });
 
+describe('listDumps', () => {
+  it('returns the dumps tagged with the given tag', async () => {
+    const dumps = [
+      {
+        id: 'dump-1',
+        content: 'buy coffee #casa',
+        createdAt: '2026-10-14T12:00:00.000Z',
+        tags: [{ id: 'tag-1', name: 'casa' }],
+      },
+    ];
+    const fetchMock = stubFetch(jsonResponse(dumps));
+
+    await expect(listDumps('casa')).resolves.toEqual(dumps);
+    expect(fetchMock).toHaveBeenCalledWith('/api/dumps?tag=casa', undefined);
+  });
+
+  it('encodes the tag into the query', async () => {
+    const fetchMock = stubFetch(jsonResponse([]));
+
+    await listDumps('café');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/dumps?tag=caf%C3%A9',
+      undefined,
+    );
+  });
+
+  it('throws the API message when the dumps cannot be loaded', async () => {
+    stubFetch(jsonResponse({ message: 'Database is down' }, { status: 500 }));
+
+    await expect(listDumps('casa')).rejects.toThrow('Database is down');
+  });
+});
+
 describe('listTags', () => {
   it('returns the tags with their counts', async () => {
     const fetchMock = stubFetch(
@@ -69,7 +103,9 @@ describe('listTags', () => {
 
     await expect(listTags()).rejects.toThrow('Database is down');
   });
+});
 
+describe('listTags error bodies', () => {
   it('takes the first message of a validation error', async () => {
     stubFetch(
       jsonResponse(
