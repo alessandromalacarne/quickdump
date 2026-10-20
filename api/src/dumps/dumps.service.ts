@@ -5,9 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { WorkflowDispatcherService } from '../workflows/workflow-dispatcher.service.js';
+import { extractDecks, stripDecks } from './deck-parser.js';
 import type { CreateDumpDto } from './dto/create-dump.dto.js';
 import type { UpdateDumpDto } from './dto/update-dump.dto.js';
-import { extractTags } from './tag-parser.js';
+
+interface ParsedDump {
+  content: string;
+  deckNames: string[];
+}
 
 @Injectable()
 export class DumpsService {
@@ -17,17 +22,19 @@ export class DumpsService {
   ) {}
 
   async create(dto: CreateDumpDto) {
+    const { content, deckNames } = parseDump(dto.content);
+
     const dump = await this.prisma.dump.create({
       data: {
-        content: dto.content,
-        tags: {
-          connectOrCreate: this.tagNamesFrom(dto.content).map((name) => ({
+        content,
+        decks: {
+          connectOrCreate: deckNames.map((name) => ({
             where: { name },
             create: { name },
           })),
         },
       },
-      include: { tags: true },
+      include: { decks: true },
     });
 
     void this.dispatcher.dispatch({
@@ -36,98 +43,109 @@ export class DumpsService {
       dump: {
         id: dump.id,
         content: dump.content,
-        tagNames: dump.tags.map((tag) => tag.name),
+        deckNames: dump.decks.map((deck) => deck.name),
       },
     });
 
     return dump;
   }
 
-  async list(tag?: string) {
+  async list(deck?: string) {
     return this.prisma.dump.findMany({
-      where: tag ? { tags: { some: { name: tag.toLowerCase() } } } : {},
+      where: deck ? { decks: { some: { name: deck.toLowerCase() } } } : {},
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: { tags: true },
+      include: { decks: true },
     });
   }
 
   async update(id: string, dto: UpdateDumpDto) {
-    const tagNames = this.tagNamesFrom(dto.content);
+    const { content, deckNames } = parseDump(dto.content);
 
-    const { updated, orphanedTags } = await this.prisma.$transaction(
+    const { updated, orphanedDecks } = await this.prisma.$transaction(
       async (tx) => {
         const { count } = await tx.dump.updateMany({
           where: { id },
-          data: { content: dto.content },
+          data: { content },
         });
 
         if (count === 0) {
           throw new NotFoundException('Dump not found');
         }
 
-        const tags = await Promise.all(
-          tagNames.map((name) =>
-            tx.tag.upsert({ where: { name }, update: {}, create: { name } }),
+        const decks = await Promise.all(
+          deckNames.map((name) =>
+            tx.deck.upsert({ where: { name }, update: {}, create: { name } }),
           ),
         );
 
         const updated = await tx.dump.update({
           where: { id },
-          data: { tags: { set: tags.map(({ id: tagId }) => ({ id: tagId })) } },
-          include: { tags: true },
+          data: {
+            decks: { set: decks.map(({ id: deckId }) => ({ id: deckId })) },
+          },
+          include: { decks: true },
         });
 
-        const orphaned = await tx.tag.findMany({
+        const orphaned = await tx.deck.findMany({
           where: { dumps: { none: {} } },
         });
-        await tx.tag.deleteMany({ where: { dumps: { none: {} } } });
+        await tx.deck.deleteMany({ where: { dumps: { none: {} } } });
 
-        return { updated, orphanedTags: orphaned };
+        return { updated, orphanedDecks: orphaned };
       },
     );
 
-    this.dispatchTagDeletions(orphanedTags);
+    this.dispatchDeckDeletions(orphanedDecks);
 
     return updated;
   }
 
   async remove(id: string): Promise<void> {
-    const orphanedTags = await this.prisma.$transaction(async (tx) => {
+    const orphanedDecks = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.dump.deleteMany({ where: { id } });
 
       if (count === 0) {
         throw new NotFoundException('Dump not found');
       }
 
-      const orphaned = await tx.tag.findMany({
+      const orphaned = await tx.deck.findMany({
         where: { dumps: { none: {} } },
       });
-      await tx.tag.deleteMany({ where: { dumps: { none: {} } } });
+      await tx.deck.deleteMany({ where: { dumps: { none: {} } } });
 
       return orphaned;
     });
 
-    this.dispatchTagDeletions(orphanedTags);
+    this.dispatchDeckDeletions(orphanedDecks);
   }
 
-  private tagNamesFrom(content: string): string[] {
-    const tagNames = extractTags(content);
-    if (tagNames.length === 0) {
-      throw new BadRequestException('Include at least one #tag in the dump');
-    }
-
-    return tagNames;
-  }
-
-  // A tag that loses its last dump is gone exactly like a deleted one, so the
+  // A deck that loses its last dump is gone exactly like a deleted one, so the
   // workflows watching it hear about it the same way.
-  private dispatchTagDeletions(tags: { id: string; name: string }[]): void {
-    for (const tag of tags) {
+  private dispatchDeckDeletions(decks: { id: string; name: string }[]): void {
+    for (const deck of decks) {
       void this.dispatcher.dispatch({
-        kind: 'tagDeleted',
+        kind: 'deckDeleted',
         occurredAt: new Date().toISOString(),
-        tag: { id: tag.id, name: tag.name },
+        deck: { id: deck.id, name: deck.name },
       });
     }
   }
+}
+
+// The marker only points at a deck: what lands in the body is plain text, and
+// the relation is the only place a dump's decks live.
+function parseDump(raw: string): ParsedDump {
+  const deckNames = extractDecks(raw);
+
+  if (deckNames.length === 0) {
+    throw new BadRequestException('Include at least one @deck in the dump');
+  }
+
+  const content = stripDecks(raw);
+
+  if (content.length === 0) {
+    throw new BadRequestException('The dump needs text besides the @deck');
+  }
+
+  return { content, deckNames };
 }
