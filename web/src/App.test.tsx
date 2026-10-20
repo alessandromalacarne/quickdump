@@ -6,7 +6,7 @@ import App from './App';
 import {
   createDump,
   listDumps,
-  listTags,
+  listDecks,
   listWorkflows,
   listScripts,
 } from './api';
@@ -14,9 +14,9 @@ import {
 vi.mock('./api', () => ({
   createDump: vi.fn(),
   deleteDump: vi.fn(),
-  deleteTag: vi.fn(),
+  deleteDeck: vi.fn(),
   listDumps: vi.fn(),
-  listTags: vi.fn(),
+  listDecks: vi.fn(),
   updateDump: vi.fn(),
   listWorkflows: vi.fn(),
   listScripts: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('./api', () => ({
 
 const mockedCreateDump = vi.mocked(createDump);
 const mockedListDumps = vi.mocked(listDumps);
-const mockedListTags = vi.mocked(listTags);
+const mockedListDecks = vi.mocked(listDecks);
 const mockedListWorkflows = vi.mocked(listWorkflows);
 const mockedListScripts = vi.mocked(listScripts);
 
@@ -43,21 +43,21 @@ function renderApp(path = '/') {
 
 const casaDump = {
   id: 'dump-1',
-  content: 'buy coffee #casa',
+  content: 'buy coffee',
   createdAt: '2026-10-10T12:00:00.000Z',
-  tags: [{ id: 'tag-1', name: 'casa' }],
+  decks: [{ id: 'deck-1', name: 'casa' }],
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedCreateDump.mockResolvedValue({
     id: 'dump-1',
-    content: '#casa buy coffee',
+    content: 'buy coffee',
     createdAt: '2026-10-10T12:00:00.000Z',
-    tags: [{ id: 'tag-1', name: 'casa' }],
+    decks: [{ id: 'deck-1', name: 'casa' }],
   });
   mockedListDumps.mockResolvedValue([]);
-  mockedListTags.mockResolvedValue([]);
+  mockedListDecks.mockResolvedValue([]);
   mockedListWorkflows.mockResolvedValue([]);
   mockedListScripts.mockResolvedValue([]);
 });
@@ -74,9 +74,9 @@ describe('composer', () => {
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '#casa buy coffee{Enter}');
+    await user.type(textarea, '@casa buy coffee{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('#casa buy coffee');
+    expect(mockedCreateDump).toHaveBeenCalledWith('@casa buy coffee');
     expect(textarea).toHaveValue('');
     expect(await screen.findByText(/saved/i)).toBeInTheDocument();
   });
@@ -86,10 +86,10 @@ describe('composer', () => {
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '#casa line one{Shift>}{Enter}{/Shift}line two');
+    await user.type(textarea, '@casa line one{Shift>}{Enter}{/Shift}line two');
 
     expect(mockedCreateDump).not.toHaveBeenCalled();
-    expect(textarea).toHaveValue('#casa line one\nline two');
+    expect(textarea).toHaveValue('@casa line one\nline two');
   });
 
   it('clicking anywhere on the block focuses the field', async () => {
@@ -105,15 +105,15 @@ describe('composer', () => {
 });
 
 describe('composer errors', () => {
-  it('warns when the tag is missing and does not call the API', async () => {
+  it('warns when the deck is missing and does not call the API', async () => {
     const user = userEvent.setup();
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, 'text without a tag{Enter}');
+    await user.type(textarea, 'text without a deck{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Include at least one #tag in the dump',
+      'Include at least one @deck in the dump',
     );
     expect(mockedCreateDump).not.toHaveBeenCalled();
   });
@@ -124,19 +124,21 @@ describe('composer errors', () => {
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '#casa algo{Enter}');
+    await user.type(textarea, '@casa algo{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Database is down',
     );
-    expect(textarea).toHaveValue('#casa algo');
+    expect(textarea).toHaveValue('@casa algo');
   });
 });
 
-describe('tag pages', () => {
-  it('opens the tags page straight from the URL', async () => {
-    mockedListTags.mockResolvedValue([{ id: 'tag-1', name: 'casa', count: 2 }]);
-    renderApp('/tags');
+describe('deck pages', () => {
+  it('opens the decks page straight from the URL', async () => {
+    mockedListDecks.mockResolvedValue([
+      { id: 'deck-1', name: 'casa', count: 2 },
+    ]);
+    renderApp('/decks');
 
     expect(
       await screen.findByRole('listitem', { name: /casa/ }),
@@ -146,46 +148,50 @@ describe('tag pages', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('opens a tag page straight from the URL', async () => {
+  it('opens a deck page straight from the URL', async () => {
     mockedListDumps.mockResolvedValue([casaDump]);
-    renderApp('/tag/casa');
+    renderApp('/deck/casa');
 
-    expect(await screen.findByText('buy coffee #casa')).toBeInTheDocument();
+    expect(await screen.findByText('buy coffee')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue(
-      '#casa ',
+      '@casa ',
     );
   });
 
-  it('opens the dumps of a tag clicked on the tags page', async () => {
+  it('opens the dumps of a deck clicked on the decks page', async () => {
     const user = userEvent.setup();
-    mockedListTags.mockResolvedValue([{ id: 'tag-1', name: 'casa', count: 2 }]);
+    mockedListDecks.mockResolvedValue([
+      { id: 'deck-1', name: 'casa', count: 2 },
+    ]);
     mockedListDumps.mockResolvedValue([casaDump]);
-    renderApp('/tags');
+    renderApp('/decks');
 
-    await user.click(await screen.findByRole('link', { name: /#casa/ }));
+    await user.click(await screen.findByRole('link', { name: /@casa/ }));
 
     expect(mockedListDumps).toHaveBeenCalledWith('casa');
-    expect(await screen.findByText('buy coffee #casa')).toBeInTheDocument();
+    expect(await screen.findByText('buy coffee')).toBeInTheDocument();
   });
 });
 
 describe('navigation', () => {
-  it('navigates between the composer and the tags page', async () => {
+  it('navigates between the composer and the decks page', async () => {
     const user = userEvent.setup();
-    mockedListTags.mockResolvedValue([{ id: 'tag-1', name: 'casa', count: 2 }]);
+    mockedListDecks.mockResolvedValue([
+      { id: 'deck-1', name: 'casa', count: 2 },
+    ]);
     renderApp();
 
-    const tagsLink = screen.getByRole('link', { name: 'tags' });
+    const decksLink = screen.getByRole('link', { name: 'decks' });
     const dumpLink = screen.getByRole('link', { name: 'dump' });
     expect(dumpLink.className).toContain('text-ink');
-    expect(tagsLink.className).toContain('text-ink-faint');
+    expect(decksLink.className).toContain('text-ink-faint');
 
-    await user.click(tagsLink);
+    await user.click(decksLink);
 
     expect(
       await screen.findByRole('listitem', { name: /casa/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'tags' }).className).toContain(
+    expect(screen.getByRole('link', { name: 'decks' }).className).toContain(
       'text-ink',
     );
     expect(screen.getByRole('link', { name: 'dump' }).className).toContain(
@@ -197,14 +203,16 @@ describe('navigation', () => {
     expect(screen.getByRole('textbox', { name: /dump/i })).toBeInTheDocument();
   });
 
-  it('keeps the tags link highlighted on a tag page', async () => {
+  it('keeps the decks link highlighted on a deck page', async () => {
     mockedListDumps.mockResolvedValue([casaDump]);
-    renderApp('/tag/casa');
+    renderApp('/deck/casa');
 
-    await screen.findByText('buy coffee #casa');
+    await screen.findByText('buy coffee');
 
     expect(
-      screen.getByRole('link', { name: 'tags' }).classList.contains('text-ink'),
+      screen
+        .getByRole('link', { name: 'decks' })
+        .classList.contains('text-ink'),
     ).toBe(true);
     expect(
       screen.getByRole('link', { name: 'dump' }).classList.contains('text-ink'),

@@ -20,12 +20,12 @@ beforeEach(() => {
 });
 
 describe('creating a workflow on an event', () => {
-  it('sends the event, the tag scope and the script', async () => {
+  it('sends the event, the deck scope and the script', async () => {
     const user = userEvent.setup();
     const onSubmit = renderForm();
 
     await user.type(screen.getByLabelText('name'), 'notify casa');
-    await user.type(screen.getByLabelText('tags'), '#casa, financas');
+    await user.type(screen.getByLabelText('decks'), '@casa, financas');
     await user.selectOptions(screen.getByLabelText('script'), 'notify.sh');
     await user.click(submit());
 
@@ -34,7 +34,7 @@ describe('creating a workflow on an event', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'notify.sh' },
-      tags: ['casa', 'financas'],
+      decks: ['casa', 'financas'],
     });
   });
 
@@ -53,17 +53,17 @@ describe('creating a workflow on an event', () => {
     const user = userEvent.setup();
     const onSubmit = renderForm();
 
-    await user.type(screen.getByLabelText('name'), 'on tag deletion');
-    await user.selectOptions(screen.getByLabelText('event'), 'tagDeleted');
+    await user.type(screen.getByLabelText('name'), 'on deck deletion');
+    await user.selectOptions(screen.getByLabelText('event'), 'deckDeleted');
     await user.selectOptions(screen.getByLabelText('script'), 'archive.sh');
     await user.click(submit());
 
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'tagDeleted' }),
+      expect.objectContaining({ event: 'deckDeleted' }),
     );
   });
 
-  it('leaves the tag scope empty when nothing is typed', async () => {
+  it('leaves the deck scope empty when nothing is typed', async () => {
     const user = userEvent.setup();
     const onSubmit = renderForm();
 
@@ -72,7 +72,7 @@ describe('creating a workflow on an event', () => {
     await user.click(submit());
 
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ tags: [] }),
+      expect.objectContaining({ decks: [] }),
     );
   });
 
@@ -107,7 +107,7 @@ describe('creating a workflow on a schedule', () => {
       timezone: expect.any(String),
       action: 'export',
       config: { window: 'day' },
-      tags: [],
+      decks: [],
     });
   });
 

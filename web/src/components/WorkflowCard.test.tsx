@@ -23,7 +23,7 @@ const workflow: Workflow = {
   lastRunAt: null,
   action: 'script',
   config: { script: 'notify.sh' },
-  tags: [{ id: 'tag-1', name: 'casa' }],
+  decks: [{ id: 'deck-1', name: 'casa' }],
   createdAt: '2026-10-15T12:00:00.000Z',
   updatedAt: '2026-10-15T12:00:00.000Z',
 };
@@ -70,7 +70,7 @@ describe('WorkflowCard summary', () => {
 
     expect(screen.getByText('notify casa')).toBeInTheDocument();
     expect(
-      screen.getByText('when a dump is created · #casa · runs notify.sh'),
+      screen.getByText('when a dump is created · @casa · runs notify.sh'),
     ).toBeInTheDocument();
   });
 
@@ -80,7 +80,7 @@ describe('WorkflowCard summary', () => {
       cron: '59 23 * * *',
       action: 'export',
       config: { window: 'day' },
-      tags: [],
+      decks: [],
       nextRunAt: '2026-10-16T02:59:00.000Z',
     });
 

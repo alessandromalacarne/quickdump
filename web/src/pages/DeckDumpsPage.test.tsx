@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDump, deleteDump, listDumps, updateDump } from '../api';
-import { TagDumpsPage } from './TagDumpsPage';
+import { DeckDumpsPage } from './DeckDumpsPage';
 
 vi.mock('../api', () => ({
   createDump: vi.fn(),
@@ -20,26 +20,26 @@ const mockedUpdateDump = vi.mocked(updateDump);
 const dumps = [
   {
     id: 'dump-1',
-    content: 'buy coffee #casa',
+    content: 'buy coffee',
     createdAt: '2026-10-14T12:00:00.000Z',
-    tags: [{ id: 'tag-1', name: 'casa' }],
+    decks: [{ id: 'deck-1', name: 'casa' }],
   },
   {
     id: 'dump-2',
-    content: 'fix the sink\n#casa #home',
+    content: 'fix the sink',
     createdAt: '2026-10-13T09:30:00.000Z',
-    tags: [
-      { id: 'tag-1', name: 'casa' },
-      { id: 'tag-2', name: 'home' },
+    decks: [
+      { id: 'deck-1', name: 'casa' },
+      { id: 'deck-2', name: 'home' },
     ],
   },
 ];
 
-function renderPage(path = '/tag/casa') {
+function renderPage(path = '/deck/casa') {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/tag/:tag" element={<TagDumpsPage />} />
+        <Route path="/deck/:deck" element={<DeckDumpsPage />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -55,21 +55,21 @@ beforeEach(() => {
   mockedDeleteDump.mockResolvedValue(undefined);
 });
 
-describe('TagDumpsPage', () => {
-  it('shows the dumps tagged with the tag from the URL', async () => {
+describe('DeckDumpsPage', () => {
+  it('shows the dumps of the deck from the URL', async () => {
     renderPage();
 
     const cards = await screen.findAllByRole('listitem');
     expect(cards).toHaveLength(2);
-    expect(within(cards[0]!).getByText('buy coffee #casa')).toBeInTheDocument();
-    expect(within(cards[1]!).getByText(/fix the sink/)).toBeInTheDocument();
+    expect(within(cards[0]!).getByText('buy coffee')).toBeInTheDocument();
+    expect(within(cards[1]!).getByText('fix the sink')).toBeInTheDocument();
   });
 
-  it('heads the page with the tag and how many dumps it holds', async () => {
+  it('heads the page with the deck and how many dumps it holds', async () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { name: '#casa' }),
+      await screen.findByRole('heading', { name: '@casa' }),
     ).toBeInTheDocument();
     expect(screen.getByText('2 dumps')).toBeInTheDocument();
   });
@@ -81,19 +81,19 @@ describe('TagDumpsPage', () => {
     expect(await screen.findByText('1 dump')).toBeInTheDocument();
   });
 
-  it('shows the tags and the date of each dump', async () => {
+  it('shows the decks and the date of each dump', async () => {
     renderPage();
 
     const cards = await screen.findAllByRole('listitem');
-    expect(within(cards[1]!).getByText('#home')).toBeInTheDocument();
+    expect(within(cards[1]!).getByText('@home')).toBeInTheDocument();
     expect(
       within(cards[1]!).getByText(/Oct \d{1,2}, 2026/),
     ).toBeInTheDocument();
-    expect(within(cards[0]!).queryByText('#home')).not.toBeInTheDocument();
+    expect(within(cards[0]!).queryByText('@home')).not.toBeInTheDocument();
   });
 });
 
-describe('TagDumpsPage states', () => {
+describe('DeckDumpsPage states', () => {
   it('shows a loading state before the dumps arrive', async () => {
     renderPage();
 
@@ -103,12 +103,12 @@ describe('TagDumpsPage states', () => {
     await screen.findAllByRole('listitem');
   });
 
-  it('invites you to dump when the tag has no dumps', async () => {
+  it('invites you to dump when the deck has no dumps', async () => {
     mockedListDumps.mockResolvedValue([]);
     renderPage();
 
     expect(
-      await screen.findByText(/no dumps with #casa yet/i),
+      await screen.findByText(/no dumps with @casa yet/i),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dump/i })).toHaveAttribute(
       'href',
@@ -117,7 +117,7 @@ describe('TagDumpsPage states', () => {
   });
 });
 
-describe('TagDumpsPage errors', () => {
+describe('DeckDumpsPage errors', () => {
   it('shows the API error when the dumps cannot be loaded', async () => {
     mockedListDumps.mockRejectedValue(new Error('Database is down'));
     renderPage();
@@ -136,32 +136,32 @@ describe('TagDumpsPage errors', () => {
     );
   });
 
-  it('reads the decoded tag from the URL', async () => {
-    renderPage('/tag/caf%C3%A9');
+  it('reads the decoded deck from the URL', async () => {
+    renderPage('/deck/caf%C3%A9');
 
     await screen.findAllByRole('listitem');
 
     expect(mockedListDumps).toHaveBeenCalledWith('café');
-    expect(screen.getByRole('heading', { name: '#café' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '@café' })).toBeInTheDocument();
   });
 });
 
-describe('TagDumpsPage create', () => {
-  it('starts the composer with the tag from the URL', async () => {
+describe('DeckDumpsPage create', () => {
+  it('starts the composer with the deck from the URL', async () => {
     renderPage();
 
     expect(
       await screen.findByRole('textbox', { name: 'New dump' }),
-    ).toHaveValue('#casa ');
+    ).toHaveValue('@casa ');
   });
 
-  it('uses the decoded tag in the composer', async () => {
-    renderPage('/tag/caf%C3%A9');
+  it('uses the decoded deck in the composer', async () => {
+    renderPage('/deck/caf%C3%A9');
 
     await findCards();
 
     expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue(
-      '#café ',
+      '@café ',
     );
   });
 
@@ -169,82 +169,78 @@ describe('TagDumpsPage create', () => {
     const user = userEvent.setup();
     mockedCreateDump.mockResolvedValue({
       id: 'dump-3',
-      content: '#casa water the plants',
+      content: 'water the plants',
       createdAt: '2026-10-15T10:00:00.000Z',
-      tags: [{ id: 'tag-1', name: 'casa' }],
+      decks: [{ id: 'deck-1', name: 'casa' }],
     });
     renderPage();
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.type(textarea, 'water the plants{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('#casa water the plants');
+    expect(mockedCreateDump).toHaveBeenCalledWith('@casa water the plants');
     const cards = await findCards();
     expect(cards).toHaveLength(3);
-    expect(
-      within(cards[0]!).getByText('#casa water the plants'),
-    ).toBeInTheDocument();
+    expect(within(cards[0]!).getByText('water the plants')).toBeInTheDocument();
     expect(screen.getByText('3 dumps')).toBeInTheDocument();
-    expect(textarea).toHaveValue('#casa ');
+    expect(textarea).toHaveValue('@casa ');
     expect(mockedListDumps).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('TagDumpsPage create and the tag match', () => {
-  it('matches the page tag ignoring case', async () => {
+describe('DeckDumpsPage create and the deck match', () => {
+  it('matches the page deck ignoring case', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockResolvedValue({
       id: 'dump-3',
-      content: '#Casa water the plants',
+      content: 'water the plants',
       createdAt: '2026-10-15T10:00:00.000Z',
-      tags: [{ id: 'tag-1', name: 'casa' }],
+      decks: [{ id: 'deck-1', name: 'casa' }],
     });
-    renderPage('/tag/Casa');
+    renderPage('/deck/Casa');
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.type(textarea, 'water the plants{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('#Casa water the plants');
+    expect(mockedCreateDump).toHaveBeenCalledWith('@Casa water the plants');
     expect(await findCards()).toHaveLength(3);
   });
 
-  it('adds a dump that carries the page tag along with other tags', async () => {
+  it('adds a dump that carries the page deck along with other decks', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockResolvedValue({
       id: 'dump-3',
-      content: '#outra water the plants #casa',
+      content: 'water the plants',
       createdAt: '2026-10-15T10:00:00.000Z',
-      tags: [
-        { id: 'tag-9', name: 'outra' },
-        { id: 'tag-1', name: 'casa' },
+      decks: [
+        { id: 'deck-9', name: 'outra' },
+        { id: 'deck-1', name: 'casa' },
       ],
     });
     renderPage();
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.clear(textarea);
-    await user.type(textarea, '#outra water the plants #casa{Enter}');
+    await user.type(textarea, '@outra water the plants @casa{Enter}');
 
     expect(await findCards()).toHaveLength(3);
     const cards = await findCards();
-    expect(
-      within(cards[0]!).getByText('#outra water the plants #casa'),
-    ).toBeInTheDocument();
+    expect(within(cards[0]!).getByText('water the plants')).toBeInTheDocument();
   });
 
-  it('leaves the list alone when the saved dump carries another tag', async () => {
+  it('leaves the list alone when the saved dump carries another deck', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockResolvedValue({
       id: 'dump-3',
-      content: '#outra water the plants',
+      content: 'water the plants',
       createdAt: '2026-10-15T10:00:00.000Z',
-      tags: [{ id: 'tag-9', name: 'outra' }],
+      decks: [{ id: 'deck-9', name: 'outra' }],
     });
     renderPage();
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.clear(textarea);
-    await user.type(textarea, '#outra water the plants{Enter}');
+    await user.type(textarea, '@outra water the plants{Enter}');
 
     await waitFor(() => expect(mockedCreateDump).toHaveBeenCalledTimes(1));
     expect(await findCards()).toHaveLength(2);
@@ -252,7 +248,7 @@ describe('TagDumpsPage create and the tag match', () => {
   });
 });
 
-describe('TagDumpsPage create errors', () => {
+describe('DeckDumpsPage create errors', () => {
   it('shows the composer error and keeps the draft when saving fails', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockRejectedValue(new Error('Database is down'));
@@ -264,18 +260,18 @@ describe('TagDumpsPage create errors', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Database is down',
     );
-    expect(textarea).toHaveValue('#casa water the plants');
+    expect(textarea).toHaveValue('@casa water the plants');
   });
 });
 
-describe('TagDumpsPage edit', () => {
+describe('DeckDumpsPage edit', () => {
   it('edits a dump inline and keeps the order of the list', async () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockResolvedValue({
       id: 'dump-1',
-      content: 'buy tea #casa',
+      content: 'buy tea',
       createdAt: '2026-10-14T12:00:00.000Z',
-      tags: [{ id: 'tag-1', name: 'casa' }],
+      decks: [{ id: 'deck-1', name: 'casa' }],
     });
     renderPage();
     const [first] = await findCards();
@@ -286,18 +282,18 @@ describe('TagDumpsPage edit', () => {
 
     await user.click(editButton);
     const editor = within(first!).getByRole('textbox', { name: 'Edit dump' });
-    expect(editor).toHaveValue('buy coffee #casa');
+    expect(editor).toHaveValue('buy coffee');
 
     await user.clear(editor);
-    await user.type(editor, 'buy tea #casa');
+    await user.type(editor, 'buy tea @casa');
     await user.click(within(first!).getByRole('button', { name: 'Save' }));
 
-    expect(mockedUpdateDump).toHaveBeenCalledWith('dump-1', 'buy tea #casa');
+    expect(mockedUpdateDump).toHaveBeenCalledWith('dump-1', 'buy tea @casa');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     const cards = await findCards();
     expect(cards).toHaveLength(2);
-    expect(within(cards[0]!).getByText('buy tea #casa')).toBeInTheDocument();
-    expect(within(cards[1]!).getByText(/fix the sink/)).toBeInTheDocument();
+    expect(within(cards[0]!).getByText('buy tea')).toBeInTheDocument();
+    expect(within(cards[1]!).getByText('fix the sink')).toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: 'Edit dump' }),
     ).not.toBeInTheDocument();
@@ -307,9 +303,9 @@ describe('TagDumpsPage edit', () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockResolvedValue({
       id: 'dump-1',
-      content: 'buy tea #casa',
+      content: 'buy tea',
       createdAt: '2026-10-14T12:00:00.000Z',
-      tags: [{ id: 'tag-1', name: 'casa' }],
+      decks: [{ id: 'deck-1', name: 'casa' }],
     });
     renderPage();
     const [first] = await findCards();
@@ -317,14 +313,14 @@ describe('TagDumpsPage edit', () => {
     await user.click(within(first!).getByRole('button', { name: 'Edit dump' }));
     const editor = within(first!).getByRole('textbox', { name: 'Edit dump' });
     await user.clear(editor);
-    await user.type(editor, 'buy tea #casa {Enter}');
+    await user.type(editor, 'buy tea @casa {Enter}');
 
-    expect(mockedUpdateDump).toHaveBeenCalledWith('dump-1', 'buy tea #casa');
-    expect(await screen.findByText('buy tea #casa')).toBeInTheDocument();
+    expect(mockedUpdateDump).toHaveBeenCalledWith('dump-1', 'buy tea @casa');
+    expect(await screen.findByText('buy tea')).toBeInTheDocument();
   });
 });
 
-describe('TagDumpsPage edit cancelling', () => {
+describe('DeckDumpsPage edit cancelling', () => {
   it('cancels the edit on Escape without calling the API', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -336,7 +332,7 @@ describe('TagDumpsPage edit cancelling', () => {
     await user.type(editor, 'throw this away{Escape}');
 
     expect(mockedUpdateDump).not.toHaveBeenCalled();
-    expect(within(first!).getByText('buy coffee #casa')).toBeInTheDocument();
+    expect(within(first!).getByText('buy coffee')).toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: 'Edit dump' }),
     ).not.toBeInTheDocument();
@@ -351,18 +347,18 @@ describe('TagDumpsPage edit cancelling', () => {
     await user.click(within(first!).getByRole('button', { name: 'Cancel' }));
 
     expect(mockedUpdateDump).not.toHaveBeenCalled();
-    expect(within(first!).getByText('buy coffee #casa')).toBeInTheDocument();
+    expect(within(first!).getByText('buy coffee')).toBeInTheDocument();
   });
 });
 
-describe('TagDumpsPage edit and the tag match', () => {
-  it('drops the dump from the list when the tag leaves the content', async () => {
+describe('DeckDumpsPage edit and the deck match', () => {
+  it('drops the dump from the list when the deck leaves the content', async () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockResolvedValue({
       id: 'dump-1',
-      content: 'buy tea #outra',
+      content: 'buy tea',
       createdAt: '2026-10-14T12:00:00.000Z',
-      tags: [{ id: 'tag-9', name: 'outra' }],
+      decks: [{ id: 'deck-9', name: 'outra' }],
     });
     renderPage();
     const [first] = await findCards();
@@ -370,18 +366,18 @@ describe('TagDumpsPage edit and the tag match', () => {
     await user.click(within(first!).getByRole('button', { name: 'Edit dump' }));
     const editor = within(first!).getByRole('textbox', { name: 'Edit dump' });
     await user.clear(editor);
-    await user.type(editor, 'buy tea #outra{Enter}');
+    await user.type(editor, 'buy tea @outra{Enter}');
 
     expect(await screen.findByText('1 dump')).toBeInTheDocument();
-    expect(screen.queryByText('buy tea #outra')).not.toBeInTheDocument();
+    expect(screen.queryByText('buy tea')).not.toBeInTheDocument();
     const cards = await findCards();
     expect(cards).toHaveLength(1);
-    expect(within(cards[0]!).getByText(/fix the sink/)).toBeInTheDocument();
-    expect(screen.queryByText('buy coffee #casa')).not.toBeInTheDocument();
+    expect(within(cards[0]!).getByText('fix the sink')).toBeInTheDocument();
+    expect(screen.queryByText('buy coffee')).not.toBeInTheDocument();
   });
 });
 
-describe('TagDumpsPage edit errors', () => {
+describe('DeckDumpsPage edit errors', () => {
   it('shows the API error inside the card and keeps the draft', async () => {
     const user = userEvent.setup();
     mockedUpdateDump.mockRejectedValue(new Error('Database is down'));
@@ -391,14 +387,14 @@ describe('TagDumpsPage edit errors', () => {
     await user.click(within(first!).getByRole('button', { name: 'Edit dump' }));
     const editor = within(first!).getByRole('textbox', { name: 'Edit dump' });
     await user.clear(editor);
-    await user.type(editor, 'buy tea #casa{Enter}');
+    await user.type(editor, 'buy tea @casa{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Database is down',
     );
     expect(
       within(first!).getByRole('textbox', { name: 'Edit dump' }),
-    ).toHaveValue('buy tea #casa');
+    ).toHaveValue('buy tea @casa');
     expect(screen.getByText('2 dumps')).toBeInTheDocument();
   });
 
@@ -417,7 +413,7 @@ describe('TagDumpsPage edit errors', () => {
   });
 });
 
-describe('TagDumpsPage delete', () => {
+describe('DeckDumpsPage delete', () => {
   it('asks for confirmation before deleting', async () => {
     const user = userEvent.setup();
     renderPage();
@@ -450,7 +446,7 @@ describe('TagDumpsPage delete', () => {
 
     expect(mockedDeleteDump).toHaveBeenCalledWith('dump-1');
     expect(await screen.findByText('1 dump')).toBeInTheDocument();
-    expect(screen.queryByText('buy coffee #casa')).not.toBeInTheDocument();
+    expect(screen.queryByText('buy coffee')).not.toBeInTheDocument();
     expect(mockedListDumps).toHaveBeenCalledTimes(1);
   });
 
@@ -475,7 +471,7 @@ describe('TagDumpsPage delete', () => {
   });
 });
 
-describe('TagDumpsPage delete errors', () => {
+describe('DeckDumpsPage delete errors', () => {
   it('keeps the dump and shows the API error when the delete fails', async () => {
     const user = userEvent.setup();
     mockedDeleteDump.mockRejectedValue(new Error('Dump not found'));
@@ -492,7 +488,7 @@ describe('TagDumpsPage delete errors', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Dump not found',
     );
-    expect(within(first!).getByText('buy coffee #casa')).toBeInTheDocument();
+    expect(within(first!).getByText('buy coffee')).toBeInTheDocument();
     expect(
       within(first!).getByRole('button', { name: 'Delete dump' }),
     ).toBeInTheDocument();

@@ -41,7 +41,7 @@ const workflow: Workflow = {
   lastRunAt: null,
   action: 'script',
   config: { script: 'notify.sh' },
-  tags: [{ id: 'tag-1', name: 'casa' }],
+  decks: [{ id: 'deck-1', name: 'casa' }],
   createdAt: '2026-10-15T12:00:00.000Z',
   updatedAt: '2026-10-15T12:00:00.000Z',
 };
@@ -82,7 +82,7 @@ describe('WorkflowsPage', () => {
       await screen.findByRole('listitem', { name: /notify casa/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('when a dump is created · #casa · runs notify.sh'),
+      screen.getByText('when a dump is created · @casa · runs notify.sh'),
     ).toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe('WorkflowsPage creation', () => {
     await screen.findByRole('listitem', { name: /notify casa/ });
 
     await user.type(scriptWorkflowName(), 'archived');
-    await user.type(screen.getByLabelText('tags'), 'trabalho');
+    await user.type(screen.getByLabelText('decks'), 'trabalho');
     await user.selectOptions(screen.getByLabelText('script'), 'notify.sh');
     await user.click(screen.getByRole('button', { name: 'create workflow' }));
 
@@ -144,7 +144,7 @@ describe('WorkflowsPage creation', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'notify.sh' },
-      tags: ['trabalho'],
+      decks: ['trabalho'],
     });
     expect(
       await screen.findByRole('listitem', { name: /archived/ }),
