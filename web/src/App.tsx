@@ -2,8 +2,8 @@ import { useCallback } from 'react';
 import { NavLink, Route, Routes, useLocation } from 'react-router';
 import { createDump } from './api';
 import { Composer } from './components/Composer';
-import { TagDumpsPage } from './pages/TagDumpsPage';
-import { TagsPage } from './pages/TagsPage';
+import { DecksPage } from './pages/DecksPage';
+import { DeckDumpsPage } from './pages/DeckDumpsPage';
 import { WorkflowsPage } from './pages/WorkflowsPage';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -15,7 +15,7 @@ function App() {
   }, []);
 
   const { pathname } = useLocation();
-  const onTagArea = pathname === '/tags' || pathname.startsWith('/tag/');
+  const onDeckArea = pathname === '/decks' || pathname.startsWith('/deck/');
 
   return (
     <div className="flex h-dvh flex-col p-3 sm:p-5">
@@ -27,10 +27,10 @@ function App() {
           dump
         </NavLink>
         <NavLink
-          to="/tags"
-          className={() => navLinkClass({ isActive: onTagArea })}
+          to="/decks"
+          className={() => navLinkClass({ isActive: onDeckArea })}
         >
-          tags
+          decks
         </NavLink>
         <NavLink to="/workflows" className={navLinkClass}>
           workflows
@@ -48,8 +48,8 @@ function App() {
               </>
             }
           />
-          <Route path="/tags" element={<TagsPage />} />
-          <Route path="/tag/:tag" element={<TagDumpsPage />} />
+          <Route path="/decks" element={<DecksPage />} />
+          <Route path="/deck/:deck" element={<DeckDumpsPage />} />
           <Route path="/workflows" element={<WorkflowsPage />} />
         </Routes>
       </main>

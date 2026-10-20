@@ -257,12 +257,12 @@ export function DumpCard({ dump, onUpdate, onDelete }: DumpCardProps) {
       ) : null}
 
       <footer className="mt-3 flex flex-wrap items-center gap-2">
-        {dump.tags.map((tag) => (
+        {dump.decks.map((deck) => (
           <span
-            key={tag.id}
+            key={deck.id}
             className="rounded-full bg-paper px-2.5 py-1 text-xs text-ink-soft"
           >
-            #{tag.name}
+            @{deck.name}
           </span>
         ))}
 

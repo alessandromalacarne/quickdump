@@ -10,14 +10,14 @@ import {
 import { Composer } from '../components/Composer';
 import { DumpCard } from '../components/DumpCard';
 
-function useTagDumps(tag: string) {
+function useDeckDumps(deck: string) {
   const [dumps, setDumps] = useState<Dump[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
-    listDumps(tag)
+    listDumps(deck)
       .then((loaded) => {
         if (active) {
           setDumps(loaded);
@@ -34,25 +34,25 @@ function useTagDumps(tag: string) {
     return () => {
       active = false;
     };
-  }, [tag]);
+  }, [deck]);
 
   return { dumps, error, setDumps };
 }
 
-function carriesTag(dump: Dump, tag: string): boolean {
-  return dump.tags.some((dumpTag) => dumpTag.name === tag);
+function carriesDeck(dump: Dump, deck: string): boolean {
+  return dump.decks.some((dumpDeck) => dumpDeck.name === deck);
 }
 
 function useDumpActions(
-  tag: string,
+  deck: string,
   setDumps: Dispatch<SetStateAction<Dump[] | null>>,
 ) {
-  const target = tag.toLowerCase();
+  const target = deck.toLowerCase();
 
   async function create(content: string) {
     const created = await createDump(content);
 
-    if (carriesTag(created, target)) {
+    if (carriesDeck(created, target)) {
       setDumps((current) =>
         current === null ? current : [created, ...current],
       );
@@ -66,7 +66,7 @@ function useDumpActions(
       if (current === null) {
         return current;
       }
-      if (!carriesTag(updated, target)) {
+      if (!carriesDeck(updated, target)) {
         return current.filter((dump) => dump.id !== id);
       }
 
@@ -84,10 +84,10 @@ function useDumpActions(
   return { create, update, remove };
 }
 
-export function TagDumpsPage() {
-  const { tag = '' } = useParams();
-  const { dumps, error, setDumps } = useTagDumps(tag);
-  const { create, update, remove } = useDumpActions(tag, setDumps);
+export function DeckDumpsPage() {
+  const { deck = '' } = useParams();
+  const { dumps, error, setDumps } = useDeckDumps(deck);
+  const { create, update, remove } = useDumpActions(deck, setDumps);
   const countLabel =
     dumps === null
       ? null
@@ -99,7 +99,7 @@ export function TagDumpsPage() {
     <section className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-line bg-surface p-5 sm:p-8">
       <header className="flex shrink-0 items-baseline gap-3">
         <h1 className="text-sm font-medium tracking-widest text-ink-faint uppercase">
-          #{tag}
+          @{deck}
         </h1>
         {countLabel === null ? null : (
           <p className="text-xs text-ink-faint">{countLabel}</p>
@@ -107,7 +107,7 @@ export function TagDumpsPage() {
       </header>
 
       <div className="mt-6 h-44 shrink-0">
-        <Composer initialValue={`#${tag} `} onSubmit={create} />
+        <Composer initialValue={`@${deck} `} onSubmit={create} />
       </div>
 
       {error ? (
@@ -120,7 +120,7 @@ export function TagDumpsPage() {
         </p>
       ) : dumps.length === 0 ? (
         <p className="mt-4 text-sm text-ink-soft">
-          No dumps with #{tag} yet.{' '}
+          No dumps with @{deck} yet.{' '}
           <Link to="/" className="text-mark underline-offset-4 hover:underline">
             write a dump
           </Link>{' '}

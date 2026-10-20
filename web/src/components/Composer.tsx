@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { extractTags } from '../lib/extract-tags';
+import { extractDecks, stripDecks } from '../lib/extract-decks';
 
 interface ComposerProps {
   onSubmit: (content: string) => Promise<void>;
@@ -31,8 +31,12 @@ function useComposer(
       setError('Write something before dumping');
       return;
     }
-    if (extractTags(content).length === 0) {
-      setError('Include at least one #tag in the dump');
+    if (extractDecks(content).length === 0) {
+      setError('Include at least one @deck in the dump');
+      return;
+    }
+    if (stripDecks(content).length === 0) {
+      setError('The dump needs text besides the @deck');
       return;
     }
 
@@ -73,7 +77,7 @@ function ComposerFooter({ error, saved, busy }: ComposerFooterProps) {
         <p className="animate-fade-in text-sm text-ink-soft">dump saved</p>
       ) : (
         <p className="text-sm text-ink-faint">
-          Enter sends · at least one #tag
+          Enter sends · at least one @deck
         </p>
       )}
 
@@ -115,7 +119,7 @@ export function Composer({ onSubmit, initialValue = '' }: ComposerProps) {
         ref={textareaRef}
         autoFocus
         aria-label="New dump"
-        placeholder="Write what's on your mind... and tag it with #tag"
+        placeholder="Write what's on your mind... and add it to a @deck"
         value={value}
         onChange={(event) => change(event.target.value)}
         onKeyDown={(event) => {
