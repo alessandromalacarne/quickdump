@@ -19,7 +19,7 @@ afterAll(async () => {
 });
 
 describe('creating a workflow', () => {
-  it('creates an event workflow scoped to a tag', async () => {
+  it('creates an event workflow scoped to a deck', async () => {
     const response = await request(app.getHttpServer())
       .post('/workflows')
       .send({
@@ -27,7 +27,7 @@ describe('creating a workflow', () => {
         event: 'dumpCreated',
         action: 'script',
         config: { script: 'hello.sh' },
-        tags: ['Casa'],
+        decks: ['Casa'],
       })
       .expect(201);
 
@@ -39,7 +39,7 @@ describe('creating a workflow', () => {
       nextRunAt: null,
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: [{ name: 'casa' }],
+      decks: [{ name: 'casa' }],
     });
     expect(response.body.id).toEqual(expect.any(String));
   });
@@ -60,7 +60,7 @@ describe('creating a workflow', () => {
       cron: '59 23 * * *',
       timezone: 'America/Sao_Paulo',
       event: null,
-      tags: [],
+      decks: [],
     });
     expect(new Date(response.body.nextRunAt).getTime()).toBeGreaterThan(
       Date.now(),
@@ -125,7 +125,7 @@ describe('rejecting an invalid workflow', () => {
       .post('/workflows')
       .send({
         name: 'unknown event',
-        event: 'tagRenamed',
+        event: 'deckRenamed',
         action: 'export',
         config: {},
       })
@@ -168,7 +168,7 @@ describe('listing workflows', () => {
     expect(response.body).toEqual([]);
   });
 
-  it('lists the workflows with their tags', async () => {
+  it('lists the workflows with their decks', async () => {
     await request(app.getHttpServer())
       .post('/workflows')
       .send({
@@ -176,17 +176,17 @@ describe('listing workflows', () => {
         event: 'dumpCreated',
         action: 'script',
         config: { script: 'hello.sh' },
-        tags: ['casa'],
+        decks: ['casa'],
       })
       .expect(201);
     await request(app.getHttpServer())
       .post('/workflows')
       .send({
         name: 'second',
-        event: 'tagDeleted',
+        event: 'deckDeleted',
         action: 'script',
         config: { script: 'hello.sh' },
-        tags: ['trabalho'],
+        decks: ['trabalho'],
       })
       .expect(201);
 
@@ -197,7 +197,7 @@ describe('listing workflows', () => {
     expect(
       response.body.map((workflow: { name: string }) => workflow.name),
     ).toEqual(['first', 'second']);
-    expect(response.body[0].tags).toEqual([
+    expect(response.body[0].decks).toEqual([
       { id: expect.any(String), name: 'casa' },
     ]);
   });
@@ -233,15 +233,15 @@ describe('updating a workflow', () => {
     );
   });
 
-  it('replaces the tag scope', async () => {
+  it('replaces the deck scope', async () => {
     const workflow = await createScheduledWorkflow();
 
     const response = await request(app.getHttpServer())
       .patch(`/workflows/${workflow.id}`)
-      .send({ tags: ['trabalho'] })
+      .send({ decks: ['trabalho'] })
       .expect(200);
 
-    expect(response.body.tags).toEqual([
+    expect(response.body.decks).toEqual([
       { id: expect.any(String), name: 'trabalho' },
     ]);
   });

@@ -28,15 +28,16 @@ The dump (or the schedule window) arrives as JSON on **stdin**:
   "trigger": {
     "kind": "dumpCreated",
     "occurredAt": "2026-10-15T17:32:00.000Z",
-    "dump": { "id": "0199…", "content": "#casa buy coffee", "tagNames": ["casa"] }
+    "dump": { "id": "0199…", "content": "buy coffee", "deckNames": ["casa"] }
   }
 }
 ```
 
 `trigger.kind` is one of:
 
-- `dumpCreated` — `trigger.dump` carries the `id`, the raw `content` and the lowercased `tagNames`.
-- `tagDeleted` — `trigger.tag` carries the `id` and the `name`.
+- `dumpCreated` — `trigger.dump` carries the `id`, the `content` (the body alone: the `@deck`
+  markers are not part of it) and the lowercased `deckNames`.
+- `deckDeleted` — `trigger.deck` carries the `id` and the `name`.
 - `schedule` — `trigger.window` carries `from` and `to` (ISO timestamps).
 - `manual` — someone pressed "run now".
 
@@ -44,11 +45,11 @@ The same facts are in the environment:
 
 | Variable                | When                                       |
 | ----------------------- | ------------------------------------------ |
-| `QUICKDUMP_EVENT`       | always (`dumpCreated`, `tagDeleted`, …)    |
+| `QUICKDUMP_EVENT`       | always (`dumpCreated`, `deckDeleted`, …)   |
 | `QUICKDUMP_WORKFLOW_ID` | always                                     |
 | `QUICKDUMP_WORKFLOW_NAME` | always                                   |
 | `QUICKDUMP_DUMP_ID`     | `dumpCreated`                              |
-| `QUICKDUMP_TAGS`        | `dumpCreated` (comma separated), `tagDeleted` |
+| `QUICKDUMP_DECKS`       | `dumpCreated` (comma separated), `deckDeleted` |
 | `QUICKDUMP_WINDOW_FROM` | `schedule`                                 |
 | `QUICKDUMP_WINDOW_TO`   | `schedule`                                 |
 

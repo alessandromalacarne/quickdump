@@ -119,7 +119,7 @@ export function WorkflowsPage() {
         </p>
       ) : store.workflows.length === 0 ? (
         <p className="mt-6 text-sm text-ink-soft">
-          No workflows yet. Create one above to react to your tags.
+          No workflows yet. Create one above to react to your decks.
         </p>
       ) : (
         <ul className="mt-6 grid list-none gap-3">

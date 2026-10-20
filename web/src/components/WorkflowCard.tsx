@@ -22,15 +22,15 @@ const statusClass: Record<RunStatus, string> = {
 
 const EVENT_LABEL: Record<string, string> = {
   dumpCreated: 'when a dump is created',
-  tagDeleted: 'when a tag is deleted',
+  deckDeleted: 'when a deck is deleted',
 };
 
 const SETTLED: RunStatus[] = ['success', 'failed', 'interrupted'];
 
 function triggerSummary(workflow: Workflow): string {
   const scope =
-    workflow.tags.length > 0
-      ? ` · ${workflow.tags.map((tag) => `#${tag.name}`).join(' ')}`
+    workflow.decks.length > 0
+      ? ` · ${workflow.decks.map((deck) => `@${deck.name}`).join(' ')}`
       : '';
 
   if (workflow.cron !== null) {

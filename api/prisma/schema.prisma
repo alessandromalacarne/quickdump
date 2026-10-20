@@ -9,7 +9,7 @@ datasource db {
 
 enum WorkflowEvent {
   dumpCreated
-  tagDeleted
+  deckDeleted
 }
 
 enum WorkflowAction {
@@ -29,10 +29,10 @@ model Dump {
   id        String   @id @default(uuid(7))
   content   String
   createdAt DateTime @default(now())
-  tags      Tag[]
+  decks     Deck[]
 }
 
-model Tag {
+model Deck {
   id        String     @id @default(uuid(7))
   name      String     @unique
   dumps     Dump[]
@@ -50,7 +50,7 @@ model Workflow {
   lastRunAt DateTime?
   action    WorkflowAction
   config    Json
-  tags      Tag[]
+  decks     Deck[]
   runs      WorkflowRun[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt

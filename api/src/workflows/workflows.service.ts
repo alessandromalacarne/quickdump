@@ -22,16 +22,16 @@ interface TriggerState {
   timezone: string;
 }
 
-function normalizeTags(tags: string[] | undefined): string[] {
+function normalizeDecks(decks: string[] | undefined): string[] {
   return [
     ...new Set(
-      (tags ?? []).map((tag) => tag.trim().toLowerCase()).filter(Boolean),
+      (decks ?? []).map((deck) => deck.trim().toLowerCase()).filter(Boolean),
     ),
   ];
 }
 
-function tagConnections(tags: string[] | undefined) {
-  return normalizeTags(tags).map((name) => ({
+function deckConnections(decks: string[] | undefined) {
+  return normalizeDecks(decks).map((name) => ({
     where: { name },
     create: { name },
   }));
@@ -64,7 +64,7 @@ export class WorkflowsService {
 
   list() {
     return this.prisma.workflow.findMany({
-      include: { tags: true },
+      include: { decks: true },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
   }
@@ -88,9 +88,9 @@ export class WorkflowsService {
         action: dto.action,
         config: asJsonInput(parseActionConfig(dto.action, dto.config)),
         nextRunAt: cron && enabled ? nextRun(cron, timezone, new Date()) : null,
-        tags: { connectOrCreate: tagConnections(dto.tags) },
+        decks: { connectOrCreate: deckConnections(dto.decks) },
       },
-      include: { tags: true },
+      include: { decks: true },
     });
   }
 
@@ -126,16 +126,16 @@ export class WorkflowsService {
           current,
           new Date(),
         ),
-        ...(dto.tags === undefined
+        ...(dto.decks === undefined
           ? {}
           : {
-              tags: {
+              decks: {
                 set: [],
-                connectOrCreate: tagConnections(dto.tags),
+                connectOrCreate: deckConnections(dto.decks),
               },
             }),
       },
-      include: { tags: true },
+      include: { decks: true },
     });
   }
 

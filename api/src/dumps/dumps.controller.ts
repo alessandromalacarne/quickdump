@@ -24,8 +24,8 @@ export class DumpsController {
   }
 
   @Get()
-  list(@Query('tag') tag?: string) {
-    return this.dumpsService.list(tag);
+  list(@Query('deck') deck?: string) {
+    return this.dumpsService.list(deck);
   }
 
   @Patch(':id')

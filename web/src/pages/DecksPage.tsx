@@ -1,25 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { listTags, deleteTag, type TagWithCount } from '../api';
-import { TagCard } from '../components/TagCard';
+import { listDecks, deleteDeck, type DeckWithCount } from '../api';
+import { DeckCard } from '../components/DeckCard';
 
-function useTagList() {
-  const [tags, setTags] = useState<TagWithCount[] | null>(null);
+function useDeckList() {
+  const [decks, setDecks] = useState<DeckWithCount[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
-    listTags()
+    listDecks()
       .then((loaded) => {
         if (active) {
-          setTags(loaded);
+          setDecks(loaded);
         }
       })
       .catch((cause: unknown) => {
         if (active) {
           setError(
-            cause instanceof Error ? cause.message : 'Could not load the tags',
+            cause instanceof Error ? cause.message : 'Could not load the decks',
           );
         }
       });
@@ -29,36 +29,36 @@ function useTagList() {
     };
   }, []);
 
-  return { tags, error, setTags, setError };
+  return { decks, error, setDecks, setError };
 }
 
-function useTags() {
-  const { tags, error, setTags, setError } = useTagList();
+function useDecks() {
+  const { decks, error, setDecks, setError } = useDeckList();
 
   async function remove(id: string) {
     try {
-      await deleteTag(id);
-      setTags((current) =>
-        current === null ? current : current.filter((tag) => tag.id !== id),
+      await deleteDeck(id);
+      setDecks((current) =>
+        current === null ? current : current.filter((deck) => deck.id !== id),
       );
       setError(null);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : 'Could not delete the tag',
+        cause instanceof Error ? cause.message : 'Could not delete the deck',
       );
     }
   }
 
-  return { tags, error, remove };
+  return { decks, error, remove };
 }
 
-export function TagsPage() {
-  const { tags, error, remove } = useTags();
+export function DecksPage() {
+  const { decks, error, remove } = useDecks();
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-line bg-surface p-5 sm:p-8">
       <h1 className="text-sm font-medium tracking-widest text-ink-faint uppercase">
-        tags
+        decks
       </h1>
 
       {error ? (
@@ -67,13 +67,13 @@ export function TagsPage() {
         </p>
       ) : null}
 
-      {tags === null ? (
+      {decks === null ? (
         <p role="status" className="mt-4 text-sm text-ink-faint">
-          loading tags…
+          loading decks…
         </p>
-      ) : tags.length === 0 ? (
+      ) : decks.length === 0 ? (
         <p className="mt-4 text-sm text-ink-soft">
-          No tags yet.{' '}
+          No decks yet.{' '}
           <Link to="/" className="text-mark underline-offset-4 hover:underline">
             write a dump
           </Link>{' '}
@@ -81,8 +81,8 @@ export function TagsPage() {
         </p>
       ) : (
         <ul className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {tags.map((tag) => (
-            <TagCard key={tag.id} tag={tag} onDelete={remove} />
+          {decks.map((deck) => (
+            <DeckCard key={deck.id} deck={deck} onDelete={remove} />
           ))}
         </ul>
       )}

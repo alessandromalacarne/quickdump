@@ -17,19 +17,19 @@ describe('formatting an export file', () => {
     );
   });
 
-  it('renders each dump with its local time and tags', () => {
+  it('renders each dump with its local time and decks', () => {
     const text = formatExport(
       [
         {
           content: 'pagar aluguel',
           createdAt: new Date('2026-10-15T17:32:00.000Z'),
-          tags: [{ name: 'financas' }, { name: 'casa' }],
+          decks: [{ name: 'financas' }, { name: 'casa' }],
         },
       ],
       window,
     );
 
-    expect(text).toContain('2026-10-15 14:32  #casa #financas\npagar aluguel');
+    expect(text).toContain('2026-10-15 14:32  @casa @financas\npagar aluguel');
   });
 
   it('separates dumps with a blank line and keeps multi-line content', () => {
@@ -38,12 +38,12 @@ describe('formatting an export file', () => {
         {
           content: 'ideia pro post',
           createdAt: new Date('2026-10-15T12:11:00.000Z'),
-          tags: [{ name: 'blog' }],
+          decks: [{ name: 'blog' }],
         },
         {
           content: 'linha 1\nlinha 2',
           createdAt: new Date('2026-10-15T19:00:00.000Z'),
-          tags: [{ name: 'casa' }],
+          decks: [{ name: 'casa' }],
         },
       ],
       window,
@@ -51,8 +51,8 @@ describe('formatting an export file', () => {
 
     expect(text.split('\n\n')).toEqual([
       'quickdump — 2026-10-15\nwindow: 2026-10-15 00:00 → 2026-10-15 23:59 (America/Sao_Paulo)',
-      '2026-10-15 09:11  #blog\nideia pro post',
-      '2026-10-15 16:00  #casa\nlinha 1\nlinha 2\n',
+      '2026-10-15 09:11  @blog\nideia pro post',
+      '2026-10-15 16:00  @casa\nlinha 1\nlinha 2\n',
     ]);
   });
 });

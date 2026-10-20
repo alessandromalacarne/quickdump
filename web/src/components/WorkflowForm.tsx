@@ -8,7 +8,7 @@ import type {
 
 const EVENTS: { value: WorkflowEvent; label: string }[] = [
   { value: 'dumpCreated', label: 'a dump is created' },
-  { value: 'tagDeleted', label: 'a tag is deleted' },
+  { value: 'deckDeleted', label: 'a deck is deleted' },
 ];
 
 const WINDOWS = [
@@ -26,7 +26,7 @@ interface Draft {
   event: WorkflowEvent;
   cron: string;
   timezone: string;
-  tags: string;
+  decks: string;
   action: WorkflowAction;
   script: string;
   window: string;
@@ -39,7 +39,7 @@ function emptyDraft(): Draft {
     event: 'dumpCreated',
     cron: '59 23 * * *',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    tags: '',
+    decks: '',
     action: 'script',
     script: '',
     window: 'sinceLastRun',
@@ -59,9 +59,9 @@ function complaintAbout(draft: Draft): string | null {
 }
 
 function toInput(draft: Draft): WorkflowInput {
-  const scope = draft.tags
+  const scope = draft.decks
     .split(',')
-    .map((tag) => tag.trim().replace(/^#/, ''))
+    .map((deck) => deck.trim().replace(/^[@#]/, ''))
     .filter(Boolean);
 
   return {
@@ -74,7 +74,7 @@ function toInput(draft: Draft): WorkflowInput {
       draft.action === 'script'
         ? { script: draft.script }
         : { window: draft.window },
-    tags: scope,
+    decks: scope,
   };
 }
 
@@ -101,7 +101,7 @@ function useDraft(onSubmit: (input: WorkflowInput) => Promise<void>) {
 
     try {
       await onSubmit(toInput(draft));
-      setDraft((current) => ({ ...current, name: '', tags: '' }));
+      setDraft((current) => ({ ...current, name: '', decks: '' }));
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : 'Could not save the workflow',
@@ -177,7 +177,7 @@ function TriggerFields({ draft, update }: TriggerFieldsProps) {
           checked={draft.trigger === 'event'}
           onChange={() => update('trigger', 'event')}
         />
-        when a dump or tag event happens
+        when a dump or deck event happens
       </label>
       <label className="flex items-center gap-2 text-sm text-ink-soft">
         <input
@@ -323,11 +323,11 @@ export function WorkflowForm({ scripts, onSubmit }: WorkflowFormProps) {
       <TriggerFields draft={draft} update={update} />
 
       <Field
-        id="workflow-tags"
-        label="tags"
-        value={draft.tags}
-        onChange={(value) => update('tags', value)}
-        placeholder="casa, financas — empty means every tag"
+        id="workflow-decks"
+        label="decks"
+        value={draft.decks}
+        onChange={(value) => update('decks', value)}
+        placeholder="casa, financas — empty means every deck"
       />
 
       <ActionFields draft={draft} update={update} scripts={scripts} />

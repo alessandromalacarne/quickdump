@@ -1,7 +1,7 @@
 import type { Prisma } from '../generated/prisma/client.js';
-import type { Tag, Workflow } from '../generated/prisma/client.js';
+import type { Deck, Workflow } from '../generated/prisma/client.js';
 
-export type WorkflowWithTags = Workflow & { tags: Tag[] };
+export type WorkflowWithDecks = Workflow & { decks: Deck[] };
 
 // Prisma's write type demands an index signature that plain interfaces do not
 // carry; everything stored here goes through JSON.stringify either way.

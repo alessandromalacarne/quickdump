@@ -59,10 +59,10 @@ command      = ["npx", "vitest", "run", "--config", "./vitest.config.e2e.ts", "-
 coverage_min = 80
 
 # The unit suite is the only one stryker can drive without the repo config (same
-# `extends` gap as web), so the sweep covers what that suite covers: the tag
+# `extends` gap as web), so the sweep covers what that suite covers: the deck
 # parser. Widen it to the e2e suite once mido merges stryker.config.json.
 [targets.api.mutation]
-command = ["npx", "--no-install", "stryker", "run", "--testRunner", "vitest", "--timeoutMS", "30000", "--mutate", "src/dumps/tag-parser.ts"]
+command = ["npx", "--no-install", "stryker", "run", "--testRunner", "vitest", "--timeoutMS", "30000", "--mutate", "src/dumps/deck-parser.ts"]
 
 [failure]
 max_attempts_per_gate = 3

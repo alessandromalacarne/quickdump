@@ -18,27 +18,27 @@ afterAll(async () => {
   await app.close();
 });
 
-describe('listing tags', () => {
-  it('lists tags with counts, most used first and tie-broken by name', async () => {
+describe('listing decks', () => {
+  it('lists decks with counts, most used first and tie-broken by name', async () => {
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#casa first' })
+      .send({ content: 'first @casa' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#casa second' })
+      .send({ content: 'second @casa' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#trabalho third' })
+      .send({ content: 'third @trabalho' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#aaa fourth' })
+      .send({ content: 'fourth @aaa' })
       .expect(201);
 
     const response = await request(app.getHttpServer())
-      .get('/tags')
+      .get('/decks')
       .expect(200);
 
     expect(response.body).toEqual([
@@ -48,48 +48,50 @@ describe('listing tags', () => {
     ]);
   });
 
-  it('returns an empty list when there are no tags', async () => {
+  it('returns an empty list when there are no decks', async () => {
     const response = await request(app.getHttpServer())
-      .get('/tags')
+      .get('/decks')
       .expect(200);
 
     expect(response.body).toEqual([]);
   });
 });
 
-describe('deleting tags', () => {
-  it('deletes a tag without deleting its dumps', async () => {
+describe('deleting decks', () => {
+  it('deletes a deck without deleting its dumps', async () => {
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#casa buy coffee' })
+      .send({ content: 'buy coffee @casa' })
       .expect(201);
     await request(app.getHttpServer())
       .post('/dumps')
-      .send({ content: '#trabalho write the report' })
+      .send({ content: 'write the report @trabalho' })
       .expect(201);
 
-    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
-    const casa = tags.body.find((tag: { name: string }) => tag.name === 'casa');
-
-    await request(app.getHttpServer()).delete(`/tags/${casa.id}`).expect(204);
-
-    const remainingTags = await request(app.getHttpServer())
-      .get('/tags')
-      .expect(200);
-    expect(remainingTags.body.map((tag: { name: string }) => tag.name)).toEqual(
-      ['trabalho'],
+    const decks = await request(app.getHttpServer()).get('/decks').expect(200);
+    const casa = decks.body.find(
+      (deck: { name: string }) => deck.name === 'casa',
     );
+
+    await request(app.getHttpServer()).delete(`/decks/${casa.id}`).expect(204);
+
+    const remainingDecks = await request(app.getHttpServer())
+      .get('/decks')
+      .expect(200);
+    expect(
+      remainingDecks.body.map((deck: { name: string }) => deck.name),
+    ).toEqual(['trabalho']);
 
     const dumps = await request(app.getHttpServer()).get('/dumps').expect(200);
     expect(dumps.body.map((dump: { content: string }) => dump.content)).toEqual(
-      ['#trabalho write the report', '#casa buy coffee'],
+      ['write the report', 'buy coffee'],
     );
-    expect(dumps.body[1].tags).toEqual([]);
+    expect(dumps.body[1].decks).toEqual([]);
   });
 
-  it('returns 404 when deleting a tag that does not exist', async () => {
+  it('returns 404 when deleting a deck that does not exist', async () => {
     await request(app.getHttpServer())
-      .delete('/tags/01920000-0000-7000-8000-000000000000')
+      .delete('/decks/01920000-0000-7000-8000-000000000000')
       .expect(404);
   });
 });

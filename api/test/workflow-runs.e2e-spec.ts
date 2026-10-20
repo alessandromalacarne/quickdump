@@ -1,10 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
-import { WorkflowSchedulerService } from '../src/workflows/workflow-scheduler.service.js';
 import { createTestApp, truncateAll } from './test-app.js';
 
 interface WorkflowRunBody {
@@ -15,21 +12,18 @@ interface WorkflowRunBody {
   stderr: string | null;
   error: string | null;
   outputFile: string | null;
-  trigger: { kind: string; dump?: { id: string; tagNames: string[] } };
+  trigger: { kind: string; dump?: { id: string; deckNames: string[] } };
 }
 
 let app: INestApplication;
 let prisma: PrismaService;
-let exportsDirectory: string;
 
 beforeAll(async () => {
-  exportsDirectory = await mkdtemp(join(tmpdir(), 'quickdump-e2e-'));
   process.env.QUICKDUMP_SCRIPTS_DIR = join(
     import.meta.dirname,
     'fixtures',
     'scripts',
   );
-  process.env.QUICKDUMP_EXPORT_DIR = exportsDirectory;
 
   ({ app, prisma } = await createTestApp());
 });
@@ -40,9 +34,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await app.close();
-  await rm(exportsDirectory, { recursive: true, force: true });
   delete process.env.QUICKDUMP_SCRIPTS_DIR;
-  delete process.env.QUICKDUMP_EXPORT_DIR;
 });
 
 async function createWorkflow(body: Record<string, unknown>) {
@@ -104,10 +96,10 @@ describe('running a workflow when a dump arrives', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
 
-    const dumpId = await createDump('#casa buy coffee');
+    const dumpId = await createDump('buy coffee @casa');
     const run = await waitForRun(workflow.id);
 
     expect(run).toMatchObject({
@@ -119,7 +111,7 @@ describe('running a workflow when a dump arrives', () => {
     });
     expect(run.trigger).toMatchObject({
       kind: 'dumpCreated',
-      dump: { id: dumpId, tagNames: ['casa'] },
+      dump: { id: dumpId, deckNames: ['casa'] },
     });
   });
 
@@ -129,14 +121,14 @@ describe('running a workflow when a dump arrives', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'payload.sh', args: ['--quiet'] },
-      tags: ['casa'],
+      decks: ['casa'],
     });
 
-    const dumpId = await createDump('#casa buy coffee');
+    const dumpId = await createDump('buy coffee @casa');
     const run = await waitForRun(workflow.id);
 
     expect(run.stdout).toContain('event=dumpCreated');
-    expect(run.stdout).toContain('tags=casa');
+    expect(run.stdout).toContain('decks=casa');
     expect(run.stdout).toContain(`dump=${dumpId}`);
     expect(run.stdout).toContain('args=--quiet');
     expect(run.stdout).toContain('"name":"echo payload"');
@@ -150,7 +142,7 @@ describe('picking which workflows run', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
     const second = await createWorkflow({
       name: 'second',
@@ -159,29 +151,29 @@ describe('picking which workflows run', () => {
       config: { script: 'hello.sh' },
     });
 
-    await createDump('#casa buy coffee');
+    await createDump('buy coffee @casa');
 
     expect((await waitForRun(first.id)).status).toBe('success');
     expect((await waitForRun(second.id)).status).toBe('success');
   });
 
-  it('skips a workflow scoped to another tag', async () => {
+  it('skips a workflow scoped to another deck', async () => {
     const matching = await createWorkflow({
       name: 'casa',
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
     const other = await createWorkflow({
       name: 'trabalho',
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['trabalho'],
+      decks: ['trabalho'],
     });
 
-    await createDump('#casa buy coffee');
+    await createDump('buy coffee @casa');
     const run = await waitForRun(matching.id);
     await settle();
 
@@ -197,14 +189,14 @@ describe('when a run should not or cannot happen', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
     await request(app.getHttpServer())
       .patch(`/workflows/${workflow.id}`)
       .send({ enabled: false })
       .expect(200);
 
-    await createDump('#casa buy coffee');
+    await createDump('buy coffee @casa');
     await settle();
 
     expect(await runsOf(workflow.id)).toEqual([]);
@@ -216,10 +208,10 @@ describe('when a run should not or cannot happen', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'fail.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
 
-    await createDump('#casa buy coffee');
+    await createDump('buy coffee @casa');
     const run = await waitForRun(workflow.id);
 
     expect(run).toMatchObject({
@@ -231,45 +223,47 @@ describe('when a run should not or cannot happen', () => {
   });
 });
 
-describe('running a workflow when a tag is deleted', () => {
-  it('runs the workflows scoped to that tag', async () => {
+describe('running a workflow when a deck is deleted', () => {
+  it('runs the workflows scoped to that deck', async () => {
     const workflow = await createWorkflow({
-      name: 'tag deleted',
-      event: 'tagDeleted',
+      name: 'deck deleted',
+      event: 'deckDeleted',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
-    await createDump('#casa buy coffee');
-    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
-    const casa = tags.body.find((tag: { name: string }) => tag.name === 'casa');
+    await createDump('buy coffee @casa');
+    const decks = await request(app.getHttpServer()).get('/decks').expect(200);
+    const casa = decks.body.find(
+      (deck: { name: string }) => deck.name === 'casa',
+    );
 
-    await request(app.getHttpServer()).delete(`/tags/${casa.id}`).expect(204);
+    await request(app.getHttpServer()).delete(`/decks/${casa.id}`).expect(204);
 
     const run = await waitForRun(workflow.id);
     expect(run.status).toBe('success');
     expect(run.trigger).toMatchObject({
-      kind: 'tagDeleted',
-      tag: { id: casa.id, name: 'casa' },
+      kind: 'deckDeleted',
+      deck: { id: casa.id, name: 'casa' },
     });
   });
 
-  it('ignores a tag outside the workflow scope', async () => {
+  it('ignores a deck outside the workflow scope', async () => {
     const workflow = await createWorkflow({
-      name: 'tag deleted',
-      event: 'tagDeleted',
+      name: 'deck deleted',
+      event: 'deckDeleted',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
-    await createDump('#trabalho write the report');
-    const tags = await request(app.getHttpServer()).get('/tags').expect(200);
-    const trabalho = tags.body.find(
-      (tag: { name: string }) => tag.name === 'trabalho',
+    await createDump('write the report @trabalho');
+    const decks = await request(app.getHttpServer()).get('/decks').expect(200);
+    const trabalho = decks.body.find(
+      (deck: { name: string }) => deck.name === 'trabalho',
     );
 
     await request(app.getHttpServer())
-      .delete(`/tags/${trabalho.id}`)
+      .delete(`/decks/${trabalho.id}`)
       .expect(204);
     await settle();
 
@@ -277,47 +271,47 @@ describe('running a workflow when a tag is deleted', () => {
   });
 });
 
-describe('running a workflow when an edit leaves a tag without dumps', () => {
-  it('runs the workflows scoped to the tag that dropped out', async () => {
+describe('running a workflow when an edit leaves a deck without dumps', () => {
+  it('runs the workflows scoped to the deck that dropped out', async () => {
     const workflow = await createWorkflow({
-      name: 'tag dropped by an edit',
-      event: 'tagDeleted',
+      name: 'deck dropped by an edit',
+      event: 'deckDeleted',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
-    const dumpId = await createDump('#casa buy coffee');
+    const dumpId = await createDump('buy coffee @casa');
 
     await request(app.getHttpServer())
       .patch(`/dumps/${dumpId}`)
-      .send({ content: '#trabalho buy coffee' })
+      .send({ content: 'buy coffee @trabalho' })
       .expect(200);
 
-    const run = await waitForRun(workflow.id, 'tagDeleted');
+    const run = await waitForRun(workflow.id, 'deckDeleted');
     expect(run.status).toBe('success');
     expect(run.trigger).toMatchObject({
-      kind: 'tagDeleted',
-      tag: { name: 'casa' },
+      kind: 'deckDeleted',
+      deck: { name: 'casa' },
     });
   });
 
-  it('runs them when the last dump of the tag is deleted', async () => {
+  it('runs them when the last dump of the deck is deleted', async () => {
     const workflow = await createWorkflow({
-      name: 'tag dropped by a delete',
-      event: 'tagDeleted',
+      name: 'deck dropped by a delete',
+      event: 'deckDeleted',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
-    const dumpId = await createDump('#casa buy coffee');
+    const dumpId = await createDump('buy coffee @casa');
 
     await request(app.getHttpServer()).delete(`/dumps/${dumpId}`).expect(204);
 
-    const run = await waitForRun(workflow.id, 'tagDeleted');
+    const run = await waitForRun(workflow.id, 'deckDeleted');
     expect(run.status).toBe('success');
     expect(run.trigger).toMatchObject({
-      kind: 'tagDeleted',
-      tag: { name: 'casa' },
+      kind: 'deckDeleted',
+      deck: { name: 'casa' },
     });
   });
 });
@@ -329,7 +323,7 @@ describe('running a workflow on demand', () => {
       event: 'dumpCreated',
       action: 'script',
       config: { script: 'hello.sh' },
-      tags: ['casa'],
+      decks: ['casa'],
     });
 
     const response = await request(app.getHttpServer())
@@ -351,142 +345,3 @@ describe('running a workflow on demand', () => {
       .expect(404);
   });
 });
-
-describe('running an export workflow', () => {
-  it('writes the dumps of the tag scope to a text file', async () => {
-    const workflow = await createWorkflow({
-      name: 'export casa',
-      event: 'dumpCreated',
-      action: 'export',
-      config: { window: 'all' },
-      tags: ['casa'],
-    });
-    await createDump('#casa buy coffee');
-    await createDump('#casa clean kitchen');
-    await createDump('#trabalho write the report');
-
-    await request(app.getHttpServer())
-      .post(`/workflows/${workflow.id}/run`)
-      .expect(202);
-    // The dumps above run this workflow as well, so wait for the manual run.
-    const run = await waitForRun(workflow.id, 'manual');
-
-    expect(run.status).toBe('success');
-    expect(run.outputFile).toContain(exportsDirectory);
-
-    const content = await readFile(run.outputFile!, 'utf8');
-    expect(content).toContain('#casa buy coffee');
-    expect(content).toContain('#casa clean kitchen');
-    expect(content).not.toContain('write the report');
-  });
-
-  it('writes nothing when the window has no dumps', async () => {
-    const workflow = await createWorkflow({
-      name: 'export nothing',
-      event: 'dumpCreated',
-      action: 'export',
-      config: { window: 'all' },
-      tags: ['casa'],
-    });
-
-    await request(app.getHttpServer())
-      .post(`/workflows/${workflow.id}/run`)
-      .expect(202);
-    const run = await waitForRun(workflow.id, 'manual');
-
-    expect(run).toMatchObject({
-      status: 'success',
-      outputFile: null,
-      stdout: 'no dumps in the window',
-    });
-  });
-});
-
-describe('running scheduled workflows', () => {
-  it('runs the workflows that are due and arms the next run', async () => {
-    const workflow = await createWorkflow({
-      name: 'every five minutes',
-      cron: '*/5 * * * *',
-      action: 'export',
-      config: { window: 'sinceLastRun' },
-      tags: ['casa'],
-    });
-    await createDump('#casa buy coffee');
-    await makeDue(workflow.id);
-
-    await scheduler().tick();
-
-    const run = await waitForRun(workflow.id, 'schedule');
-    expect(run.status).toBe('success');
-    expect(await readFile(run.outputFile!, 'utf8')).toContain(
-      '#casa buy coffee',
-    );
-
-    const armed = await prisma.workflow.findUniqueOrThrow({
-      where: { id: workflow.id },
-    });
-    expect(armed.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
-    expect(armed.lastRunAt).not.toBeNull();
-  });
-
-  it('catches up on the window missed while the api was down', async () => {
-    const workflow = await createWorkflow({
-      name: 'daily export',
-      cron: '0 0 * * *',
-      action: 'export',
-      config: { window: 'sinceLastRun' },
-      tags: ['casa'],
-    });
-    await prisma.dump.create({
-      data: {
-        content: '#casa written while the api was down',
-        createdAt: daysAgo(2),
-        tags: {
-          connectOrCreate: [
-            { where: { name: 'casa' }, create: { name: 'casa' } },
-          ],
-        },
-      },
-    });
-    await makeDue(workflow.id, daysAgo(3));
-
-    await scheduler().tick();
-
-    const run = await waitForRun(workflow.id, 'schedule');
-    expect(await readFile(run.outputFile!, 'utf8')).toContain(
-      'written while the api was down',
-    );
-  });
-});
-
-describe('leaving a schedule alone', () => {
-  it('leaves workflows that are not due alone', async () => {
-    const workflow = await createWorkflow({
-      name: 'tomorrow',
-      cron: '0 0 * * *',
-      action: 'export',
-      config: { window: 'sinceLastRun' },
-      tags: ['casa'],
-    });
-
-    await scheduler().tick();
-    await settle();
-
-    expect(await runsOf(workflow.id)).toEqual([]);
-  });
-});
-
-function scheduler(): WorkflowSchedulerService {
-  return app.get(WorkflowSchedulerService);
-}
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-}
-
-async function makeDue(workflowId: string, at = new Date(Date.now() - 60_000)) {
-  await prisma.workflow.update({
-    where: { id: workflowId },
-    data: { nextRunAt: at },
-  });
-}

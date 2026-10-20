@@ -1,8 +1,8 @@
 import { Link } from 'react-router';
-import type { TagWithCount } from '../api';
+import type { DeckWithCount } from '../api';
 
-interface TagCardProps {
-  tag: TagWithCount;
+interface DeckCardProps {
+  deck: DeckWithCount;
   onDelete: (id: string) => void;
 }
 
@@ -25,20 +25,20 @@ function TrashIcon() {
   );
 }
 
-export function TagCard({ tag, onDelete }: TagCardProps) {
-  const dumps = tag.count === 1 ? '1 dump' : `${tag.count} dumps`;
+export function DeckCard({ deck, onDelete }: DeckCardProps) {
+  const dumps = deck.count === 1 ? '1 dump' : `${deck.count} dumps`;
 
   return (
     <li
-      aria-label={`#${tag.name} (${dumps})`}
+      aria-label={`@${deck.name} (${dumps})`}
       className="group flex w-40 flex-col items-center justify-self-center gap-3 rounded-2xl border border-transparent p-4 transition-colors hover:bg-surface-raised focus-within:bg-surface-raised"
     >
       <Link
-        to={`/tag/${encodeURIComponent(tag.name)}`}
+        to={`/deck/${encodeURIComponent(deck.name)}`}
         className="flex flex-col items-center gap-3 rounded-xl"
       >
         <p className="flex flex-col items-center">
-          <span className="font-medium text-ink">#{tag.name}</span>
+          <span className="font-medium text-ink">@{deck.name}</span>
           <span className="text-xs text-ink-faint">{dumps}</span>
         </p>
 
@@ -54,8 +54,8 @@ export function TagCard({ tag, onDelete }: TagCardProps) {
 
       <button
         type="button"
-        onClick={() => onDelete(tag.id)}
-        aria-label={`Delete tag #${tag.name}`}
+        onClick={() => onDelete(deck.id)}
+        aria-label={`Delete deck @${deck.name}`}
         className="flex h-10 w-10 items-center justify-center rounded-full text-ink-faint opacity-0 transition-[color,opacity,background-color] hover:bg-paper hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
       >
         <TrashIcon />

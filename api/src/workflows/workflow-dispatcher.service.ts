@@ -17,7 +17,7 @@ export class WorkflowDispatcherService {
     try {
       const workflows = await this.prisma.workflow.findMany({
         where: { enabled: true, event: trigger.kind },
-        include: { tags: true },
+        include: { decks: true },
       });
 
       for (const workflow of workflows) {
