@@ -1,9 +1,9 @@
-export interface Tag {
+export interface Deck {
   id: string;
   name: string;
 }
 
-export interface TagWithCount extends Tag {
+export interface DeckWithCount extends Deck {
   count: number;
 }
 
@@ -11,10 +11,10 @@ export interface Dump {
   id: string;
   content: string;
   createdAt: string;
-  tags: Tag[];
+  decks: Deck[];
 }
 
-export type WorkflowEvent = 'dumpCreated' | 'tagDeleted';
+export type WorkflowEvent = 'dumpCreated' | 'deckDeleted';
 
 export type WorkflowAction = 'script' | 'export';
 
@@ -32,7 +32,7 @@ export interface Workflow {
   lastRunAt: string | null;
   action: WorkflowAction;
   config: Record<string, unknown>;
-  tags: Tag[];
+  decks: Deck[];
   createdAt: string;
   updatedAt: string;
 }
@@ -63,7 +63,7 @@ export interface WorkflowInput {
   timezone?: string;
   action: WorkflowAction;
   config: Record<string, unknown>;
-  tags?: string[];
+  decks?: string[];
 }
 
 function jsonBody(method: string, body: unknown): RequestInit {
@@ -105,8 +105,8 @@ export async function createDump(content: string): Promise<Dump> {
   return (await response.json()) as Dump;
 }
 
-export async function listDumps(tag: string): Promise<Dump[]> {
-  const response = await request(`/api/dumps?tag=${encodeURIComponent(tag)}`);
+export async function listDumps(deck: string): Promise<Dump[]> {
+  const response = await request(`/api/dumps?deck=${encodeURIComponent(deck)}`);
   return (await response.json()) as Dump[];
 }
 
@@ -123,13 +123,13 @@ export async function deleteDump(id: string): Promise<void> {
   await request(`/api/dumps/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
-export async function listTags(): Promise<TagWithCount[]> {
-  const response = await request('/api/tags');
-  return (await response.json()) as TagWithCount[];
+export async function listDecks(): Promise<DeckWithCount[]> {
+  const response = await request('/api/decks');
+  return (await response.json()) as DeckWithCount[];
 }
 
-export async function deleteTag(id: string): Promise<void> {
-  await request(`/api/tags/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export async function deleteDeck(id: string): Promise<void> {
+  await request(`/api/decks/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 export async function listWorkflows(): Promise<Workflow[]> {
