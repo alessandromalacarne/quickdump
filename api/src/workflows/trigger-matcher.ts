@@ -4,16 +4,16 @@ import type { EventTrigger } from './trigger.js';
 export interface TriggerWorkflow {
   enabled: boolean;
   event: WorkflowEvent | null;
-  tags: { name: string }[];
+  decks: { name: string }[];
 }
 
-function scopeMatches(tagNames: string[], scope: { name: string }[]): boolean {
+function scopeMatches(deckNames: string[], scope: { name: string }[]): boolean {
   if (scope.length === 0) {
     return true;
   }
 
-  const wanted = new Set(scope.map((tag) => tag.name.toLowerCase()));
-  return tagNames.some((name) => wanted.has(name.toLowerCase()));
+  const wanted = new Set(scope.map((deck) => deck.name.toLowerCase()));
+  return deckNames.some((name) => wanted.has(name.toLowerCase()));
 }
 
 export function matchesWorkflow(
@@ -24,8 +24,10 @@ export function matchesWorkflow(
     return false;
   }
 
-  const tagNames =
-    trigger.kind === 'dumpCreated' ? trigger.dump.tagNames : [trigger.tag.name];
+  const deckNames =
+    trigger.kind === 'dumpCreated'
+      ? trigger.dump.deckNames
+      : [trigger.deck.name];
 
-  return scopeMatches(tagNames, workflow.tags);
+  return scopeMatches(deckNames, workflow.decks);
 }

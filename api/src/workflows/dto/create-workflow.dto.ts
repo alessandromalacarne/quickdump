@@ -41,5 +41,5 @@ export class CreateWorkflowDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  decks?: string[];
 }

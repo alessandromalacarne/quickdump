@@ -7,17 +7,17 @@ export type WorkflowTrigger =
   | {
       kind: 'dumpCreated';
       occurredAt: string;
-      dump: { id: string; content: string; tagNames: string[] };
+      dump: { id: string; content: string; deckNames: string[] };
     }
   | {
-      kind: 'tagDeleted';
+      kind: 'deckDeleted';
       occurredAt: string;
-      tag: { id: string; name: string };
+      deck: { id: string; name: string };
     }
   | { kind: 'manual'; occurredAt: string }
   | { kind: 'schedule'; occurredAt: string; window: WorkflowWindow };
 
 export type EventTrigger = Extract<
   WorkflowTrigger,
-  { kind: 'dumpCreated' | 'tagDeleted' }
+  { kind: 'dumpCreated' | 'deckDeleted' }
 >;

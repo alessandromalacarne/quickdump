@@ -8,7 +8,7 @@ import {
 import { runScriptAction } from './actions/script.action.js';
 import { ScriptsService } from './scripts.service.js';
 import type { WorkflowTrigger } from './trigger.js';
-import type { WorkflowWithTags } from './workflow.types.js';
+import type { WorkflowWithDecks } from './workflow.types.js';
 import { asJsonInput } from './workflow.types.js';
 import type { RunStatus } from '../generated/prisma/enums.js';
 
@@ -88,7 +88,7 @@ export class WorkflowRunnerService implements OnModuleInit {
   private async execute(item: QueuedRun): Promise<void> {
     const workflow = await this.prisma.workflow.findUnique({
       where: { id: item.workflowId },
-      include: { tags: true },
+      include: { decks: true },
     });
 
     if (!workflow) {
@@ -131,7 +131,7 @@ export class WorkflowRunnerService implements OnModuleInit {
   }
 
   private runAction(
-    workflow: WorkflowWithTags,
+    workflow: WorkflowWithDecks,
     trigger: WorkflowTrigger,
   ): Promise<RunOutcome> {
     return workflow.action === 'script'
@@ -140,7 +140,7 @@ export class WorkflowRunnerService implements OnModuleInit {
   }
 
   private async runScript(
-    workflow: WorkflowWithTags,
+    workflow: WorkflowWithDecks,
     trigger: WorkflowTrigger,
   ): Promise<RunOutcome> {
     const config = parseScriptConfig(workflow.config);
@@ -173,7 +173,7 @@ export class WorkflowRunnerService implements OnModuleInit {
   }
 
   private async runExport(
-    workflow: WorkflowWithTags,
+    workflow: WorkflowWithDecks,
     trigger: WorkflowTrigger,
   ): Promise<RunOutcome> {
     const config = parseExportConfig(workflow.config);
@@ -184,16 +184,16 @@ export class WorkflowRunnerService implements OnModuleInit {
       lastRunAt: workflow.lastRunAt,
       triggerWindow: trigger.kind === 'schedule' ? trigger.window : undefined,
     });
-    const tagNames = workflow.tags.map((tag) => tag.name);
+    const deckNames = workflow.decks.map((deck) => deck.name);
     const dumps = await this.prisma.dump.findMany({
       where: {
         createdAt: { gte: window.from, lt: window.to },
-        ...(tagNames.length > 0
-          ? { tags: { some: { name: { in: tagNames } } } }
+        ...(deckNames.length > 0
+          ? { decks: { some: { name: { in: deckNames } } } }
           : {}),
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      include: { tags: true },
+      include: { decks: true },
     });
     const result = await runExportAction({
       dumps,
@@ -214,7 +214,7 @@ export class WorkflowRunnerService implements OnModuleInit {
 }
 
 function scriptEnvironment(
-  workflow: WorkflowWithTags,
+  workflow: WorkflowWithDecks,
   trigger: WorkflowTrigger,
 ): Record<string, string> {
   const env: Record<string, string> = {
@@ -225,9 +225,9 @@ function scriptEnvironment(
 
   if (trigger.kind === 'dumpCreated') {
     env.QUICKDUMP_DUMP_ID = trigger.dump.id;
-    env.QUICKDUMP_TAGS = trigger.dump.tagNames.join(',');
-  } else if (trigger.kind === 'tagDeleted') {
-    env.QUICKDUMP_TAGS = trigger.tag.name;
+    env.QUICKDUMP_DECKS = trigger.dump.deckNames.join(',');
+  } else if (trigger.kind === 'deckDeleted') {
+    env.QUICKDUMP_DECKS = trigger.deck.name;
   } else if (trigger.kind === 'schedule') {
     env.QUICKDUMP_WINDOW_FROM = trigger.window.from;
     env.QUICKDUMP_WINDOW_TO = trigger.window.to;

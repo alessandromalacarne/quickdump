@@ -3,7 +3,7 @@ import { dateIn, timeIn } from '../time.js';
 export interface ExportDump {
   content: string;
   createdAt: Date;
-  tags: { name: string }[];
+  decks: { name: string }[];
 }
 
 export interface ExportWindow {
@@ -16,12 +16,12 @@ const DEFAULT_FILE_NAME = 'quickdump-{date}.txt';
 
 function dumpHeader(dump: ExportDump, timezone: string): string {
   const stamp = `${dateIn(timezone, dump.createdAt)} ${timeIn(timezone, dump.createdAt)}`;
-  const tags = [...dump.tags]
-    .map((tag) => `#${tag.name}`)
+  const decks = [...dump.decks]
+    .map((deck) => `@${deck.name}`)
     .sort()
     .join(' ');
 
-  return tags ? `${stamp}  ${tags}` : stamp;
+  return decks ? `${stamp}  ${decks}` : stamp;
 }
 
 export function formatExport(
