@@ -73,7 +73,7 @@ describe('writing an export file', () => {
         {
           content: 'pagar aluguel',
           createdAt: new Date('2026-10-15T17:32:00.000Z'),
-          tags: [{ name: 'casa' }],
+          decks: [{ name: 'casa' }],
         },
       ],
       config: { window: 'sinceLastRun', directory },
@@ -86,7 +86,7 @@ describe('writing an export file', () => {
 
     expect(result.outputFile).toBe(join(directory, 'quickdump-2026-10-15.txt'));
     expect(await readFile(result.outputFile!, 'utf8')).toContain(
-      '2026-10-15 14:32  #casa\npagar aluguel',
+      '2026-10-15 14:32  @casa\npagar aluguel',
     );
   });
 
@@ -96,9 +96,9 @@ describe('writing an export file', () => {
     const result = await runExportAction({
       dumps: [
         {
-          content: '#casa x',
+          content: 'comprar café',
           createdAt: new Date('2026-10-15T17:32:00.000Z'),
-          tags: [{ name: 'casa' }],
+          decks: [{ name: 'casa' }],
         },
       ],
       config: { window: 'sinceLastRun', directory: nested },
@@ -133,9 +133,9 @@ describe('choosing the file of an export', () => {
     const result = await runExportAction({
       dumps: [
         {
-          content: '#casa x',
+          content: 'comprar café',
           createdAt: new Date('2026-10-15T17:32:00.000Z'),
-          tags: [{ name: 'casa' }],
+          decks: [{ name: 'casa' }],
         },
       ],
       config: {
