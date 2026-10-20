@@ -23,6 +23,6 @@ export async function createTestApp(): Promise<TestContext> {
 
 export async function truncateAll(prisma: PrismaService): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "Dump", "Tag", "Workflow", "WorkflowRun" CASCADE',
+    'TRUNCATE TABLE "Dump", "Deck", "Workflow", "WorkflowRun" CASCADE',
   );
 }
