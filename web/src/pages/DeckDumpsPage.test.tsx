@@ -147,22 +147,12 @@ describe('DeckDumpsPage errors', () => {
 });
 
 describe('DeckDumpsPage create', () => {
-  it('starts the composer with the deck from the URL', async () => {
+  it('starts the composer empty', async () => {
     renderPage();
 
     expect(
       await screen.findByRole('textbox', { name: 'New dump' }),
-    ).toHaveValue('@casa ');
-  });
-
-  it('uses the decoded deck in the composer', async () => {
-    renderPage('/deck/caf%C3%A9');
-
-    await findCards();
-
-    expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue(
-      '@café ',
-    );
+    ).toHaveValue('');
   });
 
   it('adds the new dump to the top of the list without refetching', async () => {
@@ -176,14 +166,14 @@ describe('DeckDumpsPage create', () => {
     renderPage();
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
-    await user.type(textarea, 'water the plants{Enter}');
+    await user.type(textarea, 'water the plants @casa{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('@casa water the plants');
+    expect(mockedCreateDump).toHaveBeenCalledWith('water the plants @casa');
     const cards = await findCards();
     expect(cards).toHaveLength(3);
     expect(within(cards[0]!).getByText('water the plants')).toBeInTheDocument();
     expect(screen.getByText('3 dumps')).toBeInTheDocument();
-    expect(textarea).toHaveValue('@casa ');
+    expect(textarea).toHaveValue('');
     expect(mockedListDumps).toHaveBeenCalledTimes(1);
   });
 });
@@ -200,9 +190,9 @@ describe('DeckDumpsPage create and the deck match', () => {
     renderPage('/deck/Casa');
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
-    await user.type(textarea, 'water the plants{Enter}');
+    await user.type(textarea, 'water the plants @Casa{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('@Casa water the plants');
+    expect(mockedCreateDump).toHaveBeenCalledWith('water the plants @Casa');
     expect(await findCards()).toHaveLength(3);
   });
 
@@ -221,7 +211,7 @@ describe('DeckDumpsPage create and the deck match', () => {
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.clear(textarea);
-    await user.type(textarea, '@outra water the plants @casa{Enter}');
+    await user.type(textarea, 'water the plants @outra @casa{Enter}');
 
     expect(await findCards()).toHaveLength(3);
     const cards = await findCards();
@@ -240,7 +230,7 @@ describe('DeckDumpsPage create and the deck match', () => {
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
     await user.clear(textarea);
-    await user.type(textarea, '@outra water the plants{Enter}');
+    await user.type(textarea, 'water the plants @outra{Enter}');
 
     await waitFor(() => expect(mockedCreateDump).toHaveBeenCalledTimes(1));
     expect(await findCards()).toHaveLength(2);
@@ -255,12 +245,12 @@ describe('DeckDumpsPage create errors', () => {
     renderPage();
     const textarea = await screen.findByRole('textbox', { name: 'New dump' });
 
-    await user.type(textarea, 'water the plants{Enter}');
+    await user.type(textarea, 'water the plants @casa{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Database is down',
     );
-    expect(textarea).toHaveValue('@casa water the plants');
+    expect(textarea).toHaveValue('water the plants @casa');
   });
 });
 

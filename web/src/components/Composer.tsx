@@ -3,14 +3,10 @@ import { extractDecks, stripDecks } from '../lib/extract-decks';
 
 interface ComposerProps {
   onSubmit: (content: string) => Promise<void>;
-  initialValue?: string;
 }
 
-function useComposer(
-  onSubmit: (content: string) => Promise<void>,
-  initialValue: string,
-) {
-  const [value, setValue] = useState(initialValue);
+function useComposer(onSubmit: (content: string) => Promise<void>) {
+  const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -44,7 +40,7 @@ function useComposer(
     setBusy(true);
     try {
       await onSubmit(content);
-      setValue(initialValue);
+      setValue('');
       setSaved(true);
       window.clearTimeout(savedTimer.current);
       savedTimer.current = window.setTimeout(() => setSaved(false), 1600);
@@ -77,7 +73,7 @@ function ComposerFooter({ error, saved, busy }: ComposerFooterProps) {
         <p className="animate-fade-in text-sm text-ink-soft">dump saved</p>
       ) : (
         <p className="text-sm text-ink-faint">
-          Enter sends · at least one @deck
+          Enter sends · end with at least one @deck
         </p>
       )}
 
@@ -92,11 +88,8 @@ function ComposerFooter({ error, saved, busy }: ComposerFooterProps) {
   );
 }
 
-export function Composer({ onSubmit, initialValue = '' }: ComposerProps) {
-  const { value, error, saved, busy, change, submit } = useComposer(
-    onSubmit,
-    initialValue,
-  );
+export function Composer({ onSubmit }: ComposerProps) {
+  const { value, error, saved, busy, change, submit } = useComposer(onSubmit);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
@@ -119,7 +112,7 @@ export function Composer({ onSubmit, initialValue = '' }: ComposerProps) {
         ref={textareaRef}
         autoFocus
         aria-label="New dump"
-        placeholder="Write what's on your mind... and add it to a @deck"
+        placeholder="Write what's on your mind... and finish with a @deck"
         value={value}
         onChange={(event) => change(event.target.value)}
         onKeyDown={(event) => {
