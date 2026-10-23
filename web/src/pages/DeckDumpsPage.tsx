@@ -107,7 +107,7 @@ export function DeckDumpsPage() {
       </header>
 
       <div className="mt-6 h-44 shrink-0">
-        <Composer initialValue={`@${deck} `} onSubmit={create} />
+        <Composer onSubmit={create} />
       </div>
 
       {error ? (

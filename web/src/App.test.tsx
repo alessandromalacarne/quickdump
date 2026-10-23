@@ -74,9 +74,9 @@ describe('composer', () => {
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '@casa buy coffee{Enter}');
+    await user.type(textarea, 'buy coffee @casa{Enter}');
 
-    expect(mockedCreateDump).toHaveBeenCalledWith('@casa buy coffee');
+    expect(mockedCreateDump).toHaveBeenCalledWith('buy coffee @casa');
     expect(textarea).toHaveValue('');
     expect(await screen.findByText(/saved/i)).toBeInTheDocument();
   });
@@ -86,10 +86,10 @@ describe('composer', () => {
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '@casa line one{Shift>}{Enter}{/Shift}line two');
+    await user.type(textarea, 'line one{Shift>}{Enter}{/Shift}line two @casa');
 
     expect(mockedCreateDump).not.toHaveBeenCalled();
-    expect(textarea).toHaveValue('@casa line one\nline two');
+    expect(textarea).toHaveValue('line one\nline two @casa');
   });
 
   it('clicking anywhere on the block focuses the field', async () => {
@@ -118,18 +118,31 @@ describe('composer errors', () => {
     expect(mockedCreateDump).not.toHaveBeenCalled();
   });
 
+  it('warns when the deck is not at the end and does not call the API', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    const textarea = screen.getByRole('textbox', { name: /dump/i });
+
+    await user.type(textarea, 'varrer @casa o chão{Enter}');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Include at least one @deck in the dump',
+    );
+    expect(mockedCreateDump).not.toHaveBeenCalled();
+  });
+
   it('API error keeps the text and shows the message', async () => {
     const user = userEvent.setup();
     mockedCreateDump.mockRejectedValue(new Error('Database is down'));
     renderApp();
     const textarea = screen.getByRole('textbox', { name: /dump/i });
 
-    await user.type(textarea, '@casa algo{Enter}');
+    await user.type(textarea, 'algo @casa{Enter}');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Database is down',
     );
-    expect(textarea).toHaveValue('@casa algo');
+    expect(textarea).toHaveValue('algo @casa');
   });
 });
 
@@ -153,9 +166,7 @@ describe('deck pages', () => {
     renderApp('/deck/casa');
 
     expect(await screen.findByText('buy coffee')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue(
-      '@casa ',
-    );
+    expect(screen.getByRole('textbox', { name: 'New dump' })).toHaveValue('');
   });
 
   it('opens the dumps of a deck clicked on the decks page', async () => {
