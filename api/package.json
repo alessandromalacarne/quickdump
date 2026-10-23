@@ -21,8 +21,8 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "prisma:generate": "prisma generate",
-    "db:migrate": "../scripts/prisma.sh migrate dev",
-    "db:deploy": "../scripts/prisma.sh migrate deploy"
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
