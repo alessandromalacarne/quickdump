@@ -2,7 +2,7 @@
 
 Capture thoughts in seconds, retrieve them by deck later.
 
-A "dump" is a short note that names at least one deck with an `@deck` marker. Type it, hit Enter, done. The marker only points at the deck: the body that gets saved holds the text alone. Dumps are grouped by deck for later processing (e.g. assembling a post from the dumps of `@blog`).
+A "dump" is a short note that ends with at least one `@deck` marker. Type it, hit Enter, done. The marker only points at the deck: the body that gets saved holds the text alone. Dumps are grouped by deck for later processing (e.g. assembling a post from the dumps of `@blog`).
 
 ## Stack
 
@@ -116,10 +116,10 @@ everything that can reach the port. See `scripts/workflows/README.md` for the sc
 
 ## Notes
 
-- Decks come from the marker (`@home` → `home`), lowercased, no duplicates. The marker is stripped from the body before it is saved, so a dump stores plain text and its decks as a relation. A deck whose last dump is edited away or deleted is removed from `/decks`, and a workflow watching that deck hears about it like any other deletion.
-- Only `@` marks a deck: `#casa` and `foo@bar.com` are plain text.
+- Decks come from the trailing markers (`@home` → `home`), lowercased, no duplicates. Only markers at the end of the dump count: `buy coffee @casa @trabalho` links both decks, while `@casa buy coffee` and `buy coffee @casa now` have no deck at all. The markers are stripped from the body before it is saved, so a dump stores plain text and its decks as a relation. A deck whose last dump is edited away or deleted is removed from `/decks`, and a workflow watching that deck hears about it like any other deletion.
+- Only a marker at the end links a deck: `#casa`, `foo@bar.com` and a marker followed by punctuation are plain text.
 - Web UI: dark theme, composer (Enter sends, Shift+Enter breaks the line, clicking anywhere focuses the field), deck pages and a workflows page to create rules and read their runs.
-- `/deck/:deck` lists the dumps of a deck with a composer pre-filled with the marker, inline editing and delete behind a `confirm?` step.
+- `/deck/:deck` lists the dumps of a deck with an empty composer (type the trailing marker yourself), inline editing and delete behind a `confirm?` step.
 - Export files render each dump's decks in the header (`@casa`), because the body no longer carries them.
 - Single-user: no authentication in this version.
 - Prisma commands load `api/.env` automatically (values already in the environment win), so `npm run prisma:generate` and `npm run db:migrate` work on any OS.
