@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    name: mido (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [api, web]
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/quickdump_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/quickdump_test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: quickdump_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            api/package-lock.json
+            web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.target }}
+        run: npm ci
+
+      - name: Generate the Prisma client
+        if: matrix.target == 'api'
+        working-directory: api
+        run: npm run prisma:generate
+
+      - name: Install mido
+        env:
+          MIDO_VERSION: v0.5.0
+        run: |
+          base="https://github.com/alessandromalacarne/mido/releases/download/${MIDO_VERSION}"
+          archive="mido-${MIDO_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "$base/$archive"
+          curl -fsSL -o "$RUNNER_TEMP/SHA256SUMS" "$base/SHA256SUMS"
+          (cd "$RUNNER_TEMP" && grep " $archive\$" SHA256SUMS | sha256sum -c -)
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 "$RUNNER_TEMP/mido-${MIDO_VERSION}-x86_64-unknown-linux-musl/mido" "$HOME/.local/bin/mido"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # No root package.json/tsconfig.json, so the language module must be named.
+      - name: Run the mido ladder
+        run: >-
+          mido --lang typescript -p ${{ matrix.target }}
+          --report .mido/report-${{ matrix.target }}.md
+
+      - name: Upload the guardrails report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guardrails-report-${{ matrix.target }}
+          path: .mido/report-${{ matrix.target }}.md
+          if-no-files-found: ignore
