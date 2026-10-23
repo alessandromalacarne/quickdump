@@ -20,7 +20,6 @@ api/                 REST API (dumps + decks + workflows)
   test/              e2e tests (supertest + real Postgres)
 web/                 SPA: composer, deck pages, workflows page, dark theme
 scripts/pg.sh        Local Postgres via nix (init/start/stop/reset)
-scripts/prisma.sh    Prisma CLI wrapper (schema-engine from nixpkgs)
 scripts/workflows/   scripts a workflow may run (see its README)
 compose.yaml         Postgres via Docker, alternative to pg.sh
 flake.nix            devShell (Node 24 + Postgres + Prisma engines)
@@ -123,5 +122,5 @@ everything that can reach the port. See `scripts/workflows/README.md` for the sc
 - `/deck/:deck` lists the dumps of a deck with a composer pre-filled with the marker, inline editing and delete behind a `confirm?` step.
 - Export files render each dump's decks in the header (`@casa`), because the body no longer carries them.
 - Single-user: no authentication in this version.
-- On NixOS, Prisma needs the `schema-engine` from nixpkgs, so database commands go through `scripts/prisma.sh`.
-- The `flake.nix` devShell exports `PRISMA_SCHEMA_ENGINE_BINARY`, so plain `npx prisma` also works inside `nix develop`.
+- Prisma commands load `api/.env` automatically (values already in the environment win), so `npm run prisma:generate` and `npm run db:migrate` work on any OS.
+- On NixOS, Prisma cannot download its engines. The `flake.nix` devShell exports `PRISMA_SCHEMA_ENGINE_BINARY`, so run Prisma commands inside `nix develop`.
