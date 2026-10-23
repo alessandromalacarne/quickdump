@@ -51,7 +51,9 @@ describe('creating a dump', () => {
       { id: first.body.decks[0].id, name: 'casa' },
     ]);
   });
+});
 
+describe('rejecting an invalid dump', () => {
   it('rejects a dump without any deck', async () => {
     const response = await request(app.getHttpServer())
       .post('/dumps')
@@ -61,6 +63,19 @@ describe('creating a dump', () => {
     expect(response.body.message).toBe(
       'Include at least one @deck in the dump',
     );
+  });
+
+  it('rejects a marker that is not at the end', async () => {
+    for (const content of ['@casa buy coffee', 'buy coffee @casa now']) {
+      const response = await request(app.getHttpServer())
+        .post('/dumps')
+        .send({ content })
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'Include at least one @deck in the dump',
+      );
+    }
   });
 
   it('rejects a dump whose whole body is the marker', async () => {

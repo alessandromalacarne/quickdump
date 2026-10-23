@@ -9,7 +9,7 @@ describe('extractDecks', () => {
   });
 
   it('accepts accents, digits, hyphens and underscores', () => {
-    expect(extractDecks('@café @42 @casa-grande @bem_vindo')).toEqual([
+    expect(extractDecks('anotar @café @42 @casa-grande @bem_vindo')).toEqual([
       'café',
       '42',
       'casa-grande',
@@ -17,15 +17,21 @@ describe('extractDecks', () => {
     ]);
   });
 
-  it('finds a marker at the start of a line', () => {
-    expect(extractDecks('linha um\n@casa linha dois')).toEqual(['casa']);
+  it('ignores a marker at the start of the dump', () => {
+    expect(extractDecks('@casa varrer o chão')).toEqual([]);
   });
 
-  it('finds markers next to punctuation', () => {
-    expect(extractDecks('list @casa, then @trabalho.')).toEqual([
-      'casa',
-      'trabalho',
-    ]);
+  it('ignores a marker in the middle of the dump', () => {
+    expect(extractDecks('varrer @casa o chão')).toEqual([]);
+  });
+
+  it('finds markers on the last line', () => {
+    expect(extractDecks('linha um\nlinha dois @casa')).toEqual(['casa']);
+    expect(extractDecks('linha um\n@casa')).toEqual(['casa']);
+  });
+
+  it('ignores a marker followed by punctuation', () => {
+    expect(extractDecks('list @casa, then @trabalho.')).toEqual([]);
   });
 
   it('ignores an @ glued to a word', () => {
@@ -50,20 +56,29 @@ describe('stripDecks', () => {
     expect(stripDecks('comprar café @casa')).toBe('comprar café');
   });
 
-  it('removes a leading marker', () => {
-    expect(stripDecks('@casa comprar café')).toBe('comprar café');
+  it('removes every trailing marker', () => {
+    expect(stripDecks('comprar café @casa @trabalho')).toBe('comprar café');
+    expect(stripDecks('comprar café\n@casa\n@trabalho')).toBe('comprar café');
   });
 
-  it('removes markers in the middle, keeping one space between words', () => {
-    expect(stripDecks('café @casa com @trabalho agora')).toBe('café com agora');
+  it('keeps a leading marker as part of the body', () => {
+    expect(stripDecks('@casa comprar café')).toBe('@casa comprar café');
   });
 
-  it('leaves the comma attached to the word before the marker', () => {
-    expect(stripDecks('list @casa, then @trabalho.')).toBe('list, then.');
+  it('keeps markers in the middle as part of the body', () => {
+    expect(stripDecks('café @casa com @trabalho agora')).toBe(
+      'café @casa com @trabalho agora',
+    );
+  });
+
+  it('keeps a marker followed by punctuation as part of the body', () => {
+    expect(stripDecks('list @casa, then @trabalho.')).toBe(
+      'list @casa, then @trabalho.',
+    );
   });
 
   it('keeps the line structure of a multiline body', () => {
-    expect(stripDecks('linha um @casa\nlinha dois\nlinha três @trabalho')).toBe(
+    expect(stripDecks('linha um\nlinha dois\nlinha três @trabalho')).toBe(
       'linha um\nlinha dois\nlinha três',
     );
   });
@@ -77,13 +92,14 @@ describe('stripDecks', () => {
   });
 
   it('keeps the indentation of a multiline body', () => {
-    expect(stripDecks('primeira linha @casa\n  segunda linha')).toBe(
+    expect(stripDecks('primeira linha\n  segunda linha @casa')).toBe(
       'primeira linha\n  segunda linha',
     );
   });
 
-  it('drops the spaces a marker left at the end of a line', () => {
-    expect(stripDecks('café @casa  \nsegunda')).toBe('café\nsegunda');
+  it('drops the spaces left around the trailing markers', () => {
+    expect(stripDecks('café @casa  ')).toBe('café');
+    expect(stripDecks('café  \nsegunda @casa')).toBe('café\nsegunda');
   });
 
   it('leaves an @ glued to a word alone', () => {
